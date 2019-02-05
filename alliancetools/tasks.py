@@ -27,43 +27,46 @@ def update_character_notifications(character_id):
     req_scopes = ['esi-characters.read_notifications.v1']
 
     token = _get_token(character_id, req_scopes)
-    c = token.get_esi_client()
+    c = EsiResponseClient(token).get_esi_client(version='latest', response=True)
 
     at_char = AllianceToolCharacter.objects.get(character__character_id=character_id)
 
-    notifications = c.Character.get_characters_character_id_notifications(character_id=character_id).result()
-    for note in notifications:
-        notification_item, created = Notification.objects.update_or_create(character=at_char,
-                                                                           notification_id=note.get('notification_id'),
-                                                                           defaults={
-                                                                               'sender_id': note.get('sender_id'),
-                                                                               'sender_type': note.get('sender_type'),
-                                                                               'notification_text': note.get('text'),
-                                                                               'timestamp': note.get('timestamp'),
-                                                                               'notification_type': note.get('type'),
-                                                                               'is_read': note.get('is_read')})
+    notifications, result = c.Character.get_characters_character_id_notifications(character_id=character_id).result()
+    cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(tzinfo=timezone.utc)
 
-    AllianceToolCharacter.objects.filter(character__character_id=character_id).update(last_update_notifs = datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
+    for note in notifications:
+        if not Notification.objects.filter(character=at_char,
+                                           notification_id=note.get('notification_id')).exists():
+            Notification.objects.create(character=at_char,
+                                        notification_id=note.get('notification_id'),
+                                        sender_id=note.get('sender_id'),
+                                        sender_type=note.get('sender_type'),
+                                        notification_text=note.get('text'),
+                                        timestamp=note.get('timestamp'),
+                                        notification_type=note.get('type'),
+                                        is_read=note.get('is_read'))
+
+    AllianceToolCharacter.objects.filter(character__character_id=character_id).update(
+        next_update_notifs=cache_expires,
+        last_update_notifs = datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
 
 @shared_task
 def update_corp_assets(character_id):
     logger.debug("updating assets for: %s" % str(character_id))
 
     def _asset_db_update(_corp, _asset):
-        _asset, _created = CorpAsset.objects. \
-            update_or_create(corp=_corp,
-                             item_id=_asset.get('item_id'),
-                             defaults={'blueprint_copy': _asset.get('is_blueprint_copy', None),
-                                       'singleton': _asset.get('is_singleton'),
-                                       'item_id': _asset.get('item_id'),
-                                       'location_flag': _asset.get('location_flag'),
-                                       'location_id': _asset.get('location_id'),
-                                       'location_type': _asset.get('location_type'),
-                                       'quantity': _asset.get('quantity'),
-                                       'type_id': _asset.get('type_id'),
-                                       'name': _asset.get('name', None)})
+        CorpAsset.objects. \
+            create(corp=_corp,
+                   item_id=_asset.get('item_id'),
+                   blueprint_copy=_asset.get('is_blueprint_copy', None),
+                   singleton=_asset.get('is_singleton'),
+                   location_flag=_asset.get('location_flag'),
+                   location_id=_asset.get('location_id'),
+                   location_type=_asset.get('location_type'),
+                   quantity=_asset.get('quantity'),
+                   type_id=_asset.get('type_id'),
+                   name=_asset.get('name', None))
 
-        return _asset, _created
 
     req_scopes = ['esi-assets.read_corporation_assets.v1', 'esi-characters.read_corporation_roles.v1']
     req_roles = ['CEO', 'Director']
@@ -85,23 +88,24 @@ def update_corp_assets(character_id):
     _character = AllianceToolCharacter.objects.get(character__character_id=character_id)
     _corporation = EveCorporationInfo.objects.get(corporation_id=_character.character.corporation_id)
 
+    CorpAsset.objects.filter(corp=_corporation).delete()  #Nuke!
+
+    cache_expires = 0
     asset_page = 1
     total_pages = 1
-    asset_ids = []
     while asset_page <= total_pages:
         asset_list, result = c.Assets.get_corporations_corporation_id_assets(corporation_id=_corporation.corporation_id,
                                                                             page=asset_page).result()
         total_pages = int(result.headers['X-Pages'])
+        cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(tzinfo=timezone.utc)
 
         for asset in asset_list:
             _asset_db_update(_corporation, asset)  # return'd values not needed
-            asset_ids.append(asset.get('item_id'))
         asset_page += 1
 
-    CorpAsset.objects.filter(corp=_corporation).exclude(item_id__in=asset_ids).delete()
-
-    AllianceToolCharacter.objects.filter(character__character_id=character_id).update(last_update_assets = datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
-
+    AllianceToolCharacter.objects.filter(character__character_id=character_id).update(
+        next_update_assets = cache_expires,
+        last_update_assets = datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
 
 @shared_task
 def update_names_from_sde():
@@ -152,21 +156,26 @@ def update_corp_wallet_journal(character_id, wallet_division):  # pagnated resul
     logger.debug("updating corp wallet trans for: %s (%s)" % (str(character_id), str(wallet_division)))
 
     def journal_db_update(_transaction, _division):
-        _journal_item, _created = CorporationWalletJournalEntry.objects \
-            .update_or_create(division=_division, entry_id=_transaction.get('id'),
-                              defaults={'amount': _transaction.get('amount'),
-                                        'balance': _transaction.get('balance'),
-                                        'context_id': _transaction.get('context_id'),
-                                        'context_id_type': _transaction.get('context_id_type'),
-                                        'date': _transaction.get('date'),
-                                        'description': _transaction.get('description'),
-                                        'first_party_id': _transaction.get('first_party_id'),
-                                        'reason': _transaction.get('reason'),
-                                        'ref_type': _transaction.get('ref_type'),
-                                        'second_party_id': _transaction.get('second_party_id'),
-                                        'tax': _transaction.get('tax'),
-                                        'tax_reciever_id': _transaction.get('tax_reciever_id')})
-        return _journal_item, _created
+        if not CorporationWalletJournalEntry.objects.filter(division=_division,
+                                                            entry_id=_transaction.get('id')).exists():
+            _journal_item = CorporationWalletJournalEntry.objects.create(
+                division=_division,
+                entry_id=_transaction.get('id'),
+                amount=_transaction.get('amount'),
+                balance=_transaction.get('balance'),
+                context_id=_transaction.get('context_id'),
+                context_id_type=_transaction.get('context_id_type'),
+                date=_transaction.get('date'),
+                description=_transaction.get('description'),
+                first_party_id=_transaction.get('first_party_id'),
+                reason=_transaction.get('reason'),
+                ref_type=_transaction.get('ref_type'),
+                second_party_id=_transaction.get('second_party_id'),
+                tax=_transaction.get('tax'),
+                tax_reciever_id=_transaction.get('tax_reciever_id'))
+            return _journal_item
+        else:
+            return False
 
     req_scopes = ['esi-wallet.read_corporation_wallets.v1', 'esi-characters.read_corporation_roles.v1']
 
@@ -191,6 +200,7 @@ def update_corp_wallet_journal(character_id, wallet_division):  # pagnated resul
     _division = CorporationWalletDivision.objects.get(corporation=_corporation, division=wallet_division)
 
     name_ids = []
+    cache_expires = 0
     wallet_page = 1
     total_pages = 1
     while wallet_page <= total_pages:
@@ -198,9 +208,10 @@ def update_corp_wallet_journal(character_id, wallet_division):  # pagnated resul
                                                                                             division=wallet_division,
                                                                                             page=wallet_page).result()
         total_pages = int(result.headers['X-Pages'])
+        cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(tzinfo=timezone.utc)
 
         for transaction in journal:
-            journal_item, created = journal_db_update(transaction, _division)  # return'd values not needed
+            journal_item = journal_db_update(transaction, _division)  # return'd values not needed
 
             if created:    # add names to database!
                 name_ids.append(journal_item.first_party_id)
@@ -211,7 +222,9 @@ def update_corp_wallet_journal(character_id, wallet_division):  # pagnated resul
 
     # TODO pass name_ids to a new task to do names
 
-    AllianceToolCharacter.objects.filter(character__character_id=character_id).update(last_update_wallet = datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
+    AllianceToolCharacter.objects.filter(character__character_id=character_id).update(
+        next_update_wallet=cache_expires,
+        last_update_wallet=datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
 
 
 @shared_task
@@ -307,12 +320,15 @@ def update_corp_structures(character_id):  # pagnated results
 
     structure_ids = []
     structure_pages = 1
+    cache_expires = 0
     total_pages = 1
     while structure_pages <= total_pages:
         structures, result = c.Corporation.get_corporations_corporation_id_structures(
             corporation_id=_corporation.corporation_id,
             page=structure_pages).result()
+
         total_pages = int(result.headers['X-Pages'])
+        cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(tzinfo=timezone.utc)
 
         for structure in structures:
             try:
@@ -328,29 +344,56 @@ def update_corp_structures(character_id):  # pagnated results
 
     Structure.objects.filter(corporation=_corporation).exclude(structure_id__in=structure_ids).delete()    # structures die/leave
 
-    AllianceToolCharacter.objects.filter(character__character_id=character_id).update(last_update_structs = datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
+    AllianceToolCharacter.objects.filter(character__character_id=character_id).update(
+        next_update_structs=cache_expires,
+        last_update_structs=datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
 
 
 # Bulk Updaters ******************************************************************************************************
 @shared_task
 def update_all_assets():
-    for character in AllianceToolCharacter.objects.all():
-        update_corp_assets.delay(character.character.character_id)
+    print("depricicated")
 
 
 @shared_task
 def update_all_wallets():
-    for character in AllianceToolCharacter.objects.all():
-        update_corp_wallet_division.delay(character.character.character_id)
+    print("depricicated")
 
 
 @shared_task
 def update_all_structures():
-    for character in AllianceToolCharacter.objects.all():
-        update_corp_structures.delay(character.character.character_id)
+    print("depricicated")
 
 
 @shared_task
 def update_all_notifications():
+    print("depricicated")
+
+@shared_task
+def check_for_updates():
     for character in AllianceToolCharacter.objects.all():
-        update_character_notifications.delay(character.character.character_id)
+        dt_now = datetime.datetime.utcnow().replace(tzinfo=timezone.utc)  # whats the time Mr Wolf!
+
+        if character.next_update_wallet:
+            if character.next_update_wallet < dt_now:
+                update_corp_wallet_division.delay(character.character.character_id)  # cache expired
+        else:
+            update_corp_wallet_division.delay(character.character.character_id)  # new/no info
+
+        if character.next_update_structs:
+            if character.next_update_structs < dt_now:
+                update_corp_structures.delay(character.character.character_id)  # cache expired
+        else:
+            update_corp_structures.delay(character.character.character_id)  # new/no info
+
+        if character.next_update_notifs:
+            if character.next_update_notifs < dt_now:
+                update_character_notifications.delay(character.character.character_id)  # cache expired
+        else:
+            update_character_notifications.delay(character.character.character_id)  # new/no info
+
+        if character.next_update_assets:
+            if character.next_update_assets < dt_now:
+                update_corp_assets.delay(character.character.character_id)  # cache expired
+        else:
+            update_corp_assets.delay(character.character.character_id)  # new/no info

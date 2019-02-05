@@ -13,16 +13,33 @@
             <div class="flex-container flex-wrap">
                 {% if alts %}
                     {% for alt in alts%}
-                        <div class=".flex-item text-center col-sm-4 col-md-3">
+                        <div class=".flex-item text-center col-sm-6 col-md-6">
                             <img class="ra-avatar img-circle" src="https://image.eveonline.com/Character/{{ alt.character.character_id }}_128.jpg">
                             <h4>{{ alt.character.character_name }}</h4>
                             <div>
                                 <p>Corp: <span class="badge badge-light">{{ alt.character.corporation_name }}</span></p>
                                 {% if alt.last_update_wallet  %}
-                                    <p>Wallet Updated: <span class="badge badge-light">{{ alt.last_update_wallet|naturaltime }}</span></p>
-                                    <p>Assets Updated: <span class="badge badge-light">{{ alt.last_update_assets|naturaltime }}</span></p>
-                                    <p>Notifications Updated: <span class="badge badge-light">{{ alt.last_update_notifs|naturaltime }}</span></p>
-                                    <p>Structures Updated: <span class="badge badge-light">{{ alt.last_update_structs|naturaltime }}</span></p>
+                                <table class="table table-hover">
+                                    <thead>
+                                    <tr>
+                                        <th>Update Task</th>
+                                        <th class="text-center">Last Update</th>
+                                        <th class="text-center">Cache Expires</th>
+                                    </tr>
+                                    </thead>
+                                    <tr>
+                                        <td class="text-left">Notifications</td><td>{{ alt.last_update_notifs|naturaltime }}</td><td>{{ alt.next_update_notifs|naturaltime }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-left">Wallet</td><td>{{ alt.last_update_wallet|naturaltime }}</td><td>{{ alt.next_update_wallet|naturaltime }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-left">Structures</td><td>{{ alt.last_update_structs|naturaltime }}</td><td>{{ alt.next_update_structs|naturaltime }}</td>
+                                     </tr>
+                                    <tr>
+                                        <td class="text-left">Assets</td><td>{{ alt.last_update_assets|naturaltime }}</td><td>{{ alt.next_update_assets|naturaltime }}</td>
+                                    </tr>
+                                </table>
                                 {% else %}
                                     <div class="alert alert-warning text-center">{% trans "No Token Loaded" %}</div>
                                 {% endif %}

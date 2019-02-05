@@ -12,8 +12,13 @@ class AllianceToolCharacter(models.Model):
     last_update_assets = models.DateTimeField(null=True, default=None)
     last_update_structs = models.DateTimeField(null=True, default=None)
 
+    next_update_wallet = models.DateTimeField(null=True, default=None)
+    next_update_notifs = models.DateTimeField(null=True, default=None)
+    next_update_assets = models.DateTimeField(null=True, default=None)
+    next_update_structs = models.DateTimeField(null=True, default=None)
+
     def __str__(self):
-        return "{0} ({1})".format(self.character.character_name, self.character.corporation_name)
+        return "{}'s AllianceToolCharacter".format(self.character.character_name)
 
 
     class Meta:
