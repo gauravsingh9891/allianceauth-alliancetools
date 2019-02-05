@@ -22,21 +22,10 @@ def dashboard(request):
     main_char = request.user.profile.main_character
 
     try:
-        main_character = AllianceToolCharacter.objects.get(character=main_char)
-        alt_list = [co.character for co in main_char.character_ownership.user.character_ownerships.all()]
-        alts = []
-        for alt in alt_list:
-            if not main_char == alt:
-                try:
-                    alts.append(AllianceToolCharacter.objects.get(character=alt))
-                except:
-                    alt_item = {}
-                    alt_item['character'] = alt
-                    alts.append(alt_item)
+        main_characters = AllianceToolCharacter.objects.all()
 
         context = {
-            'main_character': main_character,
-            'alts': alts,
+            'alts': main_characters
         }
         return render(request, 'alliancetools/dashboard.html', context=context)
 
