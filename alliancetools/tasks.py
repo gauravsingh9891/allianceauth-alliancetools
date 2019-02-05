@@ -213,7 +213,7 @@ def update_corp_wallet_journal(character_id, wallet_division):  # pagnated resul
         for transaction in journal:
             journal_item = journal_db_update(transaction, _division)  # return'd values not needed
 
-            if created:    # add names to database!
+            if journal_item:    # add names to database!
                 name_ids.append(journal_item.first_party_id)
                 name_ids.append(journal_item.second_party_id)
                 name_ids.append(journal_item.tax_reciever_id)
