@@ -83,7 +83,7 @@ def update_corp_assets(character_id):
         return "No Roles on Character"
 
     _character = AllianceToolCharacter.objects.get(character__character_id=character_id)
-    _corporation, _created_corp = EveCorporationInfo.objects.get_or_create(corporation_id=_character.character.corporation_id)
+    _corporation = EveCorporationInfo.objects.get(corporation_id=_character.character.corporation_id)
 
     asset_page = 1
     total_pages = 1
@@ -187,7 +187,7 @@ def update_corp_wallet_journal(character_id, wallet_division):  # pagnated resul
         return "No Roles on Character"
 
     _character = AllianceToolCharacter.objects.get(character__character_id=character_id)
-    _corporation, _created_corp = EveCorporationInfo.objects.get_or_create(corporation_id=_character.character.corporation_id)
+    _corporation = EveCorporationInfo.objects.get(corporation_id=_character.character.corporation_id)
     _division = CorporationWalletDivision.objects.get(corporation=_corporation, division=wallet_division)
 
     name_ids = []
@@ -236,7 +236,7 @@ def update_corp_wallet_division(character_id):  # pagnated results
         return "No Roles on Character"
 
     _character = AllianceToolCharacter.objects.get(character__character_id=character_id)
-    _corporation, _created_corp = EveCorporationInfo.objects.get_or_create(corporation_id=_character.character.corporation_id)
+    _corporation = EveCorporationInfo.objects.get(corporation_id=_character.character.corporation_id)
 
     _divisions = c.Wallet.get_corporations_corporation_id_wallets(corporation_id=_corporation.corporation_id).result()
 
@@ -303,7 +303,7 @@ def update_corp_structures(character_id):  # pagnated results
         return "No Roles on Character"
 
     _character = AllianceToolCharacter.objects.get(character__character_id=character_id)
-    _corporation, _created_corp = EveCorporationInfo.objects.get_or_create(corporation_id=_character.character.corporation_id)
+    _corporation = EveCorporationInfo.objects.get(corporation_id=_character.character.corporation_id)
 
     structure_ids = []
     structure_pages = 1
