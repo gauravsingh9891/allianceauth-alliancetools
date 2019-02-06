@@ -6,6 +6,7 @@ from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Token
 from .esi_workaround import EsiResponseClient
 from django.utils import timezone
+from django.db import transaction
 import bz2
 import re
 import requests
@@ -21,6 +22,7 @@ def _get_token(character_id, scopes):
 
 
 @shared_task
+@transaction.atomic
 def update_character_notifications(character_id):
     logger.debug("updating notifications for: %s" % str(character_id))
 
@@ -51,6 +53,7 @@ def update_character_notifications(character_id):
         last_update_notifs = datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
 
 @shared_task
+@transaction.atomic
 def update_corp_assets(character_id):
     logger.debug("updating assets for: %s" % str(character_id))
 
@@ -108,6 +111,7 @@ def update_corp_assets(character_id):
         last_update_assets = datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
 
 @shared_task
+@transaction.atomic
 def update_names_from_sde():
     ItemName.objects.all().delete()
     TypeName.objects.all().delete()
@@ -152,6 +156,7 @@ def update_names_from_sde():
 
 
 @shared_task
+@transaction.atomic
 def update_corp_wallet_journal(character_id, wallet_division):  # pagnated results
     logger.debug("updating corp wallet trans for: %s (%s)" % (str(character_id), str(wallet_division)))
 
@@ -228,6 +233,7 @@ def update_corp_wallet_journal(character_id, wallet_division):  # pagnated resul
 
 
 @shared_task
+@transaction.atomic
 def update_corp_wallet_division(character_id):  # pagnated results
     logger.debug("updating wallet divs for: %s" % str(character_id))
 
@@ -263,6 +269,7 @@ def update_corp_wallet_division(character_id):  # pagnated results
 
 
 @shared_task
+@transaction.atomic
 def update_corp_structures(character_id):  # pagnated results
     logger.debug("updating corp structures for: %s" % (str(character_id)))
 
