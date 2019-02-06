@@ -163,7 +163,7 @@ def update_names_from_sde():
 
 
 @shared_task
-def update_corp_wallet_journal(character_id, wallet_division):  # pagnated results
+def update_corp_wallet_journal(character_id, wallet_division, full_update=False):  # pagnated results
     logger.debug("Started wallet trans for: %s (%s)" % (str(character_id), str(wallet_division)))
 
     def journal_db_update(_transaction, _division, existing_id):
@@ -216,8 +216,13 @@ def update_corp_wallet_journal(character_id, wallet_division):  # pagnated resul
     cache_expires = 0
     wallet_page = 1
     total_pages = 1
+    max_pages = 10
+
+    if full_update:
+        max_pages=999
+
     last_thrity = list(CorporationWalletJournalEntry.objects.filter(date__gt=(datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(days=60))).values_list('entry_id', flat=True))
-    while wallet_page <= total_pages:
+    while wallet_page <= total_pages and wallet_page < max_pages:
         journal, result = c.Wallet.get_corporations_corporation_id_wallets_division_journal(corporation_id=_corporation.corporation_id,
                                                                                             division=wallet_division,
                                                                                             page=wallet_page).result()
@@ -243,7 +248,7 @@ def update_corp_wallet_journal(character_id, wallet_division):  # pagnated resul
 
 
 @shared_task
-def update_corp_wallet_division(character_id):  # pagnated results
+def update_corp_wallet_division(character_id, full_update=False):  # pagnated results
     logger.debug("Started wallet divs for: %s" % str(character_id))
 
     req_scopes = ['esi-wallet.read_corporation_wallets.v1', 'esi-characters.read_corporation_roles.v1']
@@ -274,7 +279,7 @@ def update_corp_wallet_division(character_id):  # pagnated results
                               defaults={'balance': division.get('balance')})
 
         if _division_item:
-            update_corp_wallet_journal(character_id, division.get('division')) #inline not async
+            update_corp_wallet_journal(character_id, division.get('division'), full_update=full_update) #inline not async
 
     return "Finished wallet divs for: %s" % (str(character_id))
 
@@ -394,13 +399,11 @@ def check_for_updates():
     for character in AllianceToolCharacter.objects.all():
         run_char_updates.delay(character.character.character_id)
 
-import time
-
 
 @shared_task(bind=True, base=QueueOnce)
 def run_char_updates(self, character_id):
     logger.debug("Started update for: %s" % (str(character_id)))
-    time.sleep(15)
+
     character = AllianceToolCharacter.objects.get(character__character_id=character_id)
 
     dt_now = datetime.datetime.utcnow().replace(tzinfo=timezone.utc)  # whats the time Mr Wolf!
@@ -421,7 +424,7 @@ def run_char_updates(self, character_id):
         if character.next_update_wallet < dt_now:
             logger.debug(update_corp_wallet_division(character.character.character_id))  # cache expired
     else:
-            logger.debug(update_corp_wallet_division(character.character.character_id))  # new/no info
+            logger.debug(update_corp_wallet_division(character.character.character_id, full_update=True))  # new/no info
 
     if character.next_update_assets:
         if character.next_update_assets < dt_now:
