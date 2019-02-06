@@ -24,7 +24,7 @@ def _get_token(character_id, scopes):
 @shared_task
 @transaction.atomic
 def update_character_notifications(character_id):
-    logger.debug("updating notifications for: %s" % str(character_id))
+    logger.debug("Started notifications for: %s" % str(character_id))
 
     req_scopes = ['esi-characters.read_notifications.v1']
 
@@ -50,12 +50,15 @@ def update_character_notifications(character_id):
 
     AllianceToolCharacter.objects.filter(character__character_id=character_id).update(
         next_update_notifs=cache_expires,
-        last_update_notifs = datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
+        last_update_notifs=datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
+
+    return "Finished notifications for: %s" % (str(character_id))
+
 
 @shared_task
 @transaction.atomic
 def update_corp_assets(character_id):
-    logger.debug("updating assets for: %s" % str(character_id))
+    logger.debug("Started assets for: %s" % str(character_id))
 
     def _asset_create(_corp, _asset):
         return CorpAsset(  corp=_corp,
@@ -110,6 +113,9 @@ def update_corp_assets(character_id):
         next_update_assets = cache_expires,
         last_update_assets = datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
 
+    return "Finished assets for: %s" % (str(character_id))
+
+
 @shared_task
 @transaction.atomic
 def update_names_from_sde():
@@ -158,7 +164,7 @@ def update_names_from_sde():
 @shared_task
 @transaction.atomic
 def update_corp_wallet_journal(character_id, wallet_division):  # pagnated results
-    logger.debug("updating corp wallet trans for: %s (%s)" % (str(character_id), str(wallet_division)))
+    logger.debug("Started wallet trans for: %s (%s)" % (str(character_id), str(wallet_division)))
 
     def journal_db_update(_transaction, _division):
         if not CorporationWalletJournalEntry.objects.filter(division=_division,
@@ -231,11 +237,13 @@ def update_corp_wallet_journal(character_id, wallet_division):  # pagnated resul
         next_update_wallet=cache_expires,
         last_update_wallet=datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
 
+    return "Finished wallet trans for: %s" % (str(character_id))
+
 
 @shared_task
 @transaction.atomic
 def update_corp_wallet_division(character_id):  # pagnated results
-    logger.debug("updating wallet divs for: %s" % str(character_id))
+    logger.debug("Started wallet divs for: %s" % str(character_id))
 
     req_scopes = ['esi-wallet.read_corporation_wallets.v1', 'esi-characters.read_corporation_roles.v1']
     req_roles = ['CEO', 'Director', 'Accountant', 'Junior_Accountant']
@@ -265,13 +273,15 @@ def update_corp_wallet_division(character_id):  # pagnated results
                               defaults={'balance': division.get('balance')})
 
         if _division_item:
-            update_corp_wallet_journal.delay(character_id, division.get('division'))
+            update_corp_wallet_journal(character_id, division.get('division')) #inline not async
+
+    return "Finished wallet divs for: %s" % (str(character_id))
 
 
 @shared_task
 @transaction.atomic
 def update_corp_structures(character_id):  # pagnated results
-    logger.debug("updating corp structures for: %s" % (str(character_id)))
+    logger.debug("Started structures for: %s" % (str(character_id)))
 
     def _structures_db_update(_corporation, _structure, _name):
         _structure_ob, _created = Structure.objects.update_or_create(
@@ -355,6 +365,8 @@ def update_corp_structures(character_id):  # pagnated results
         next_update_structs=cache_expires,
         last_update_structs=datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
 
+    return "Finished structures for: %s" % (str(character_id))
+
 
 # Bulk Updaters ******************************************************************************************************
 @shared_task
@@ -376,31 +388,43 @@ def update_all_structures():
 def update_all_notifications():
     print("depricicated")
 
+
 @shared_task
 def check_for_updates():
     for character in AllianceToolCharacter.objects.all():
-        dt_now = datetime.datetime.utcnow().replace(tzinfo=timezone.utc)  # whats the time Mr Wolf!
+        run_char_updates.delay(character.character.character_id)
 
-        if character.next_update_wallet:
-            if character.next_update_wallet < dt_now:
-                update_corp_wallet_division.delay(character.character.character_id)  # cache expired
-        else:
-            update_corp_wallet_division.delay(character.character.character_id)  # new/no info
 
-        if character.next_update_structs:
-            if character.next_update_structs < dt_now:
-                update_corp_structures.delay(character.character.character_id)  # cache expired
-        else:
-            update_corp_structures.delay(character.character.character_id)  # new/no info
+@shared_task(bind=True, max_retries=3, autoretry_for=(Exception,), retry_backoff=5)
+def run_char_updates(self, character_id):
+    logger.debug("Started update for: %s" % (str(character_id)))
 
-        if character.next_update_notifs:
-            if character.next_update_notifs < dt_now:
-                update_character_notifications.delay(character.character.character_id)  # cache expired
-        else:
-            update_character_notifications.delay(character.character.character_id)  # new/no info
+    character = AllianceToolCharacter.objects.get(character__character_id=character_id)
 
-        if character.next_update_assets:
-            if character.next_update_assets < dt_now:
-                update_corp_assets.delay(character.character.character_id)  # cache expired
-        else:
-            update_corp_assets.delay(character.character.character_id)  # new/no info
+    dt_now = datetime.datetime.utcnow().replace(tzinfo=timezone.utc)  # whats the time Mr Wolf!
+
+    if character.next_update_notifs:
+        if character.next_update_notifs < dt_now:
+            logger.debug(update_character_notifications(character.character.character_id))  # cache expired
+    else:
+        logger.debug(update_character_notifications(character.character.character_id))  # new/no info
+
+    if character.next_update_structs:
+        if character.next_update_structs < dt_now:
+            logger.debug(update_corp_structures(character.character.character_id))  # cache expired
+    else:
+            logger.debug(update_corp_structures(character.character.character_id))  # new/no info
+
+    if character.next_update_wallet:
+        if character.next_update_wallet < dt_now:
+            logger.debug(update_corp_wallet_division(character.character.character_id))  # cache expired
+    else:
+            logger.debug(update_corp_wallet_division(character.character.character_id))  # new/no info
+
+    if character.next_update_assets:
+        if character.next_update_assets < dt_now:
+            logger.debug(update_corp_assets(character.character.character_id))  # cache expired
+    else:
+            logger.debug(update_corp_assets(character.character.character_id))  # new/no info
+
+    return "Finished Update for: %s" % (str(character_id))
