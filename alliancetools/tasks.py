@@ -1,5 +1,6 @@
 import logging
 from celery import shared_task
+from celery_once import QueueOnce
 from .models import CorpAsset, ItemName, TypeName, Structure, Notification, CorporationWalletJournalEntry, \
     CorporationWalletDivision, AllianceToolCharacter, StructureService
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
@@ -22,7 +23,6 @@ def _get_token(character_id, scopes):
 
 
 @shared_task
-@transaction.atomic
 def update_character_notifications(character_id):
     logger.debug("Started notifications for: %s" % str(character_id))
 
@@ -56,7 +56,6 @@ def update_character_notifications(character_id):
 
 
 @shared_task
-@transaction.atomic
 def update_corp_assets(character_id):
     logger.debug("Started assets for: %s" % str(character_id))
 
@@ -117,7 +116,6 @@ def update_corp_assets(character_id):
 
 
 @shared_task
-@transaction.atomic
 def update_names_from_sde():
     ItemName.objects.all().delete()
     TypeName.objects.all().delete()
@@ -162,14 +160,14 @@ def update_names_from_sde():
 
 
 @shared_task
-@transaction.atomic
 def update_corp_wallet_journal(character_id, wallet_division):  # pagnated results
     logger.debug("Started wallet trans for: %s (%s)" % (str(character_id), str(wallet_division)))
 
-    def journal_db_update(_transaction, _division):
-        if not CorporationWalletJournalEntry.objects.filter(division=_division,
-                                                            entry_id=_transaction.get('id')).exists():
-            _journal_item = CorporationWalletJournalEntry.objects.create(
+    def journal_db_update(_transaction, _division, existing_id):
+        # print("Length Eid's: %s" % str(len(existing_id)))
+
+        if not _transaction.get('id') in existing_id:
+            _journal_item = CorporationWalletJournalEntry(
                 division=_division,
                 entry_id=_transaction.get('id'),
                 amount=_transaction.get('amount'),
@@ -210,10 +208,12 @@ def update_corp_wallet_journal(character_id, wallet_division):  # pagnated resul
     _corporation = EveCorporationInfo.objects.get(corporation_id=_character.character.corporation_id)
     _division = CorporationWalletDivision.objects.get(corporation=_corporation, division=wallet_division)
 
+    bulk_wallet_items = []
     name_ids = []
     cache_expires = 0
     wallet_page = 1
     total_pages = 1
+    last_thrity = list(CorporationWalletJournalEntry.objects.filter(date__gt=(datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(days=60))).values_list('entry_id', flat=True))
     while wallet_page <= total_pages:
         journal, result = c.Wallet.get_corporations_corporation_id_wallets_division_journal(corporation_id=_corporation.corporation_id,
                                                                                             division=wallet_division,
@@ -222,16 +222,15 @@ def update_corp_wallet_journal(character_id, wallet_division):  # pagnated resul
         cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(tzinfo=timezone.utc)
 
         for transaction in journal:
-            journal_item = journal_db_update(transaction, _division)  # return'd values not needed
+            _j_ob = journal_db_update(transaction, _division, last_thrity)
+            if _j_ob:
+                bulk_wallet_items.append(_j_ob)  # return'd values not needed
 
-            if journal_item:    # add names to database!
-                name_ids.append(journal_item.first_party_id)
-                name_ids.append(journal_item.second_party_id)
-                name_ids.append(journal_item.tax_reciever_id)
 
         wallet_page += 1
 
     # TODO pass name_ids to a new task to do names
+    CorporationWalletJournalEntry.objects.bulk_create(bulk_wallet_items, batch_size=500)
 
     AllianceToolCharacter.objects.filter(character__character_id=character_id).update(
         next_update_wallet=cache_expires,
@@ -241,7 +240,6 @@ def update_corp_wallet_journal(character_id, wallet_division):  # pagnated resul
 
 
 @shared_task
-@transaction.atomic
 def update_corp_wallet_division(character_id):  # pagnated results
     logger.debug("Started wallet divs for: %s" % str(character_id))
 
@@ -279,7 +277,6 @@ def update_corp_wallet_division(character_id):  # pagnated results
 
 
 @shared_task
-@transaction.atomic
 def update_corp_structures(character_id):  # pagnated results
     logger.debug("Started structures for: %s" % (str(character_id)))
 
@@ -395,7 +392,7 @@ def check_for_updates():
         run_char_updates.delay(character.character.character_id)
 
 
-@shared_task(bind=True, max_retries=3, autoretry_for=(Exception,), retry_backoff=5)
+@shared_task(bind=True, max_retries=3, autoretry_for=(Exception,), retry_backoff=5, base_class=QueueOnce)
 def run_char_updates(self, character_id):
     logger.debug("Started update for: %s" % (str(character_id)))
 

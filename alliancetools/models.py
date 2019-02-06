@@ -47,6 +47,10 @@ class WalletJournalEntry(models.Model):
 
     class Meta:
         abstract = True
+        indexes = (
+            models.Index(fields=['entry_id']),
+            models.Index(fields=['date'])
+        )
 
 
 class CorporationWalletDivision(models.Model):
