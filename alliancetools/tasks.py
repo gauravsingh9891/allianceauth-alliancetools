@@ -1,6 +1,5 @@
 import logging
 from celery import shared_task
-from celery_once import QueueOnce
 from .models import CorpAsset, ItemName, TypeName, Structure, Notification, CorporationWalletJournalEntry, \
     CorporationWalletDivision, AllianceToolCharacter, StructureService
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
@@ -8,6 +7,8 @@ from esi.models import Token
 from .esi_workaround import EsiResponseClient
 from django.utils import timezone
 from django.db import transaction
+from allianceauth.services.tasks import QueueOnce
+
 import bz2
 import re
 import requests
@@ -16,7 +17,6 @@ import datetime
 logger = logging.getLogger(__name__)
 
 # ['esi-characters.read_notifications.v1', 'esi-assets.read_corporation_assets.v1', 'esi-characters.read_corporation_roles.v1', 'esi-wallet.read_corporation_wallets.v1', 'esi-corporations.read_structures.v1', 'esi-universe.read_structures.v1']
-
 
 def _get_token(character_id, scopes):
     return Token.objects.filter(character_id=character_id).require_scopes(scopes)[0]
@@ -394,11 +394,13 @@ def check_for_updates():
     for character in AllianceToolCharacter.objects.all():
         run_char_updates.delay(character.character.character_id)
 
+import time
 
-@shared_task(bind=True, max_retries=3, autoretry_for=(Exception,), retry_backoff=5, base_class=QueueOnce)
+
+@shared_task(bind=True, base=QueueOnce)
 def run_char_updates(self, character_id):
     logger.debug("Started update for: %s" % (str(character_id)))
-
+    time.sleep(15)
     character = AllianceToolCharacter.objects.get(character__character_id=character_id)
 
     dt_now = datetime.datetime.utcnow().replace(tzinfo=timezone.utc)  # whats the time Mr Wolf!
