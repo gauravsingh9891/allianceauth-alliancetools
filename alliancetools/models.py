@@ -96,7 +96,7 @@ class Structure(models.Model):
     unanchors_at = models.DateTimeField(null=True, default=None)
 
     #extra
-    name = models.CharField(max_length=25, choices=_state_enum)
+    name = models.CharField(max_length=150, choices=_state_enum)
     ozone_level = models.IntegerField(null=True, default=None)
 
 
