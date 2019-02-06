@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def _get_token(character_id, scopes):
-    return Token.objects.filter(character_id=character_id).require_scopes(scopes).require_valid()[0]
+    return Token.objects.filter(character_id=character_id).require_scopes(scopes)[0]
 
 
 @shared_task
@@ -57,19 +57,17 @@ def update_character_notifications(character_id):
 def update_corp_assets(character_id):
     logger.debug("updating assets for: %s" % str(character_id))
 
-    def _asset_db_update(_corp, _asset):
-        CorpAsset.objects. \
-            create(corp=_corp,
-                   item_id=_asset.get('item_id'),
-                   blueprint_copy=_asset.get('is_blueprint_copy', None),
-                   singleton=_asset.get('is_singleton'),
-                   location_flag=_asset.get('location_flag'),
-                   location_id=_asset.get('location_id'),
-                   location_type=_asset.get('location_type'),
-                   quantity=_asset.get('quantity'),
-                   type_id=_asset.get('type_id'),
-                   name=_asset.get('name', None))
-
+    def _asset_create(_corp, _asset):
+        return CorpAsset(  corp=_corp,
+                           item_id=_asset.get('item_id'),
+                           blueprint_copy=_asset.get('is_blueprint_copy', None),
+                           singleton=_asset.get('is_singleton'),
+                           location_flag=_asset.get('location_flag'),
+                           location_id=_asset.get('location_id'),
+                           location_type=_asset.get('location_type'),
+                           quantity=_asset.get('quantity'),
+                           type_id=_asset.get('type_id'),
+                           name=_asset.get('name', None))
 
     req_scopes = ['esi-assets.read_corporation_assets.v1', 'esi-characters.read_corporation_roles.v1']
     req_roles = ['CEO', 'Director']
@@ -93,6 +91,7 @@ def update_corp_assets(character_id):
 
     CorpAsset.objects.filter(corp=_corporation).delete()  #Nuke!
 
+    assets_for_insert = []
     cache_expires = 0
     asset_page = 1
     total_pages = 1
@@ -103,9 +102,10 @@ def update_corp_assets(character_id):
         cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(tzinfo=timezone.utc)
 
         for asset in asset_list:
-            _asset_db_update(_corporation, asset)  # return'd values not needed
+            assets_for_insert.append(_asset_create(_corporation, asset))
         asset_page += 1
 
+    CorpAsset.objects.bulk_create(assets_for_insert, batch_size=500)
     AllianceToolCharacter.objects.filter(character__character_id=character_id).update(
         next_update_assets = cache_expires,
         last_update_assets = datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
