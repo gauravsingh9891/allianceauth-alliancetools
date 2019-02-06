@@ -35,18 +35,21 @@ def update_character_notifications(character_id):
 
     notifications, result = c.Character.get_characters_character_id_notifications(character_id=character_id).result()
     cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(tzinfo=timezone.utc)
+    last_five_hundred = list(Notification.objects.filter(character=at_char)[:500].values_list('notification_id', flat=True))
 
+    mass_notificaitons = []
     for note in notifications:
-        if not Notification.objects.filter(character=at_char,
-                                           notification_id=note.get('notification_id')).exists():
-            Notification.objects.create(character=at_char,
-                                        notification_id=note.get('notification_id'),
-                                        sender_id=note.get('sender_id'),
-                                        sender_type=note.get('sender_type'),
-                                        notification_text=note.get('text'),
-                                        timestamp=note.get('timestamp'),
-                                        notification_type=note.get('type'),
-                                        is_read=note.get('is_read'))
+        if not note.get('notification_id') in last_five_hundred:
+            mass_notificaitons.append(Notification(character=at_char,
+                                                    notification_id=note.get('notification_id'),
+                                                    sender_id=note.get('sender_id'),
+                                                    sender_type=note.get('sender_type'),
+                                                    notification_text=note.get('text'),
+                                                    timestamp=note.get('timestamp'),
+                                                    notification_type=note.get('type'),
+                                                    is_read=note.get('is_read')))
+
+    Notification.objects.bulk_create(mass_notificaitons, batch_size=500)
 
     AllianceToolCharacter.objects.filter(character__character_id=character_id).update(
         next_update_notifs=cache_expires,
