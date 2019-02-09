@@ -444,5 +444,5 @@ def run_ozone_levels(self, character_id):
     _corporation = EveCorporationInfo.objects.get(corporation_id=_character.character.corporation_id)
     _structures = Structure.objects.filter(type_id=35841, corporation=_corporation)
     for structure in _structures:
-        _quantity = CorpAsset.objects.filter(corp=_corporation, location_id=structure.structure_id, type_id=16273).aggregate(ozone=Sum('quantity'))['quantity']
-        BridgeOzoneLevel.objects.create(structure_id=structure.structure_id, quantity=_quantity)
+        _quantity = CorpAsset.objects.filter(corp=_corporation, location_id=structure.structure_id, type_id=16273).aggregate(ozone=Sum('quantity'))['ozone']
+        BridgeOzoneLevel.objects.create(station_id=structure.structure_id, quantity=_quantity)
