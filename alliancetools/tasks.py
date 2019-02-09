@@ -8,6 +8,7 @@ from .esi_workaround import EsiResponseClient
 from django.utils import timezone
 from django.db import transaction
 from allianceauth.services.tasks import QueueOnce
+from django.db.models import Sum
 
 import bz2
 import re
