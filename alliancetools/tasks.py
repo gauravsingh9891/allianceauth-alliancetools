@@ -1,7 +1,7 @@
 import logging
 from celery import shared_task
 from .models import CorpAsset, ItemName, TypeName, Structure, Notification, CorporationWalletJournalEntry, \
-    CorporationWalletDivision, AllianceToolCharacter, StructureService
+    CorporationWalletDivision, AllianceToolCharacter, StructureService, BridgeOzoneLevel
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Token
 from .esi_workaround import EsiResponseClient
