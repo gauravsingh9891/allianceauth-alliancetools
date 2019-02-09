@@ -153,3 +153,10 @@ class ItemName(models.Model):
 class TypeName(models.Model):
     name = models.CharField(max_length=500)
     type_id = models.BigIntegerField(primary_key=True)
+
+
+# Analytic Models *****************************************************************************************************
+class BridgeOzoneLevel(models.Model):
+    station_id = models.CharField(max_length=500)
+    quantity = models.BigIntegerField(primary_key=True)
+    date = models.DateTimeField(auto_now=True)

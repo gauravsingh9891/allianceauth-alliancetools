@@ -429,7 +429,19 @@ def run_char_updates(self, character_id):
     if character.next_update_assets:
         if character.next_update_assets < dt_now:
             logger.debug(update_corp_assets(character.character.character_id))  # cache expired
+            if character.next_update_structs:
+                run_ozone_levels.delay(character_id)
     else:
             logger.debug(update_corp_assets(character.character.character_id))  # new/no info
 
     return "Finished Update for: %s" % (str(character_id))
+
+
+@shared_task(bind=True, base=QueueOnce)
+def run_ozone_levels(self, character_id):
+    _character = AllianceToolCharacter.objects.get(character__character_id=character_id)
+    _corporation = EveCorporationInfo.objects.get(corporation_id=_character.character.corporation_id)
+    _structures = Structure.objects.filter(type_id=16273, corporation=_corporation)
+    for structure in _structures:
+        _quantity = CorpAsset.objects.filter(corporation=_corporation, location_id=structure.structure_id, type_id=16273).aggregate(ozone=Sum('quantity'))['quantity']
+        BridgeOzoneLevel.objects.create(structure_id=structure.structure_id, quantity=_quantity)
