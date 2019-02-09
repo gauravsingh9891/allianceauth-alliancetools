@@ -157,6 +157,7 @@ class TypeName(models.Model):
 
 # Analytic Models *****************************************************************************************************
 class BridgeOzoneLevel(models.Model):
+    id = models.AutoField(primary_key=True)
     station_id = models.CharField(max_length=500)
-    quantity = models.BigIntegerField(primary_key=True)
+    quantity = models.BigIntegerField()
     date = models.DateTimeField(auto_now=True)
