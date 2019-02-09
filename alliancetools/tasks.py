@@ -140,7 +140,7 @@ def update_names_from_sde():
 
     # Parse file(s) and Update names object(s)
     item_names = []
-    with open('invNames.csv', 'r') as iN:
+    with open('invNames.csv', 'r', encoding='UTF-8') as iN:
         csv_list = iN.read().split('\n')
         for row in csv_list[1:]:
             spl = row.split(',')
@@ -150,7 +150,7 @@ def update_names_from_sde():
     ItemName.objects.bulk_create(item_names, batch_size=500)
 
     type_names = []
-    with open('invTypes.csv', 'r') as iT:
+    with open('invTypes.csv', 'r', encoding='UTF-8') as iT:
         # Remove Descriptions
         text = re.sub(r'\"((.|\n)*?)\"', 'None', iT.read())
         # Process file
