@@ -445,4 +445,13 @@ def run_ozone_levels(self, character_id):
     _structures = Structure.objects.filter(type_id=35841, corporation=_corporation)
     for structure in _structures:
         _quantity = CorpAsset.objects.filter(corp=_corporation, location_id=structure.structure_id, type_id=16273).aggregate(ozone=Sum('quantity'))['ozone']
-        BridgeOzoneLevel.objects.create(station_id=structure.structure_id, quantity=_quantity)
+        _used = 0
+
+        try:
+            last_ozone = BridgeOzoneLevel.objects.filter(station_id=structure.structure_id).order_by('-date')[:1][0].quantity
+            delta = last_ozone - _quantity
+            _used = (delta if _quantity < last_ozone else 0)
+        except:
+            pass
+
+        BridgeOzoneLevel.objects.create(station_id=structure.structure_id, quantity=_quantity, used=_used)
