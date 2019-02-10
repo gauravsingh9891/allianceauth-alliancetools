@@ -116,7 +116,7 @@ class StructureService(models.Model):
 class Asset(models.Model):
     blueprint_copy = models.NullBooleanField(default=None)
     singleton = models.BooleanField()
-    item_id = models.BigIntegerField(unique=True)
+    item_id = models.BigIntegerField()
     location_flag = models.CharField(max_length=50)
     location_id = models.BigIntegerField()
     location_type = models.CharField(max_length=25)
