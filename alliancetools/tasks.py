@@ -447,6 +447,8 @@ def run_ozone_levels(self, character_id):
         _quantity = CorpAsset.objects.filter(corp=_corporation, location_id=structure.structure_id, type_id=16273).aggregate(ozone=Sum('quantity'))['ozone']
         _used = 0
 
+        if _quantity is None:
+            _quantity = 0
         try:
             last_ozone = BridgeOzoneLevel.objects.filter(station_id=structure.structure_id).order_by('-date')[:1][0].quantity
             delta = last_ozone - _quantity
