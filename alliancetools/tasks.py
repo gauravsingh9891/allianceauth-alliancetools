@@ -1,7 +1,7 @@
 import logging
 from celery import shared_task
 from .models import CorpAsset, ItemName, TypeName, Structure, Notification, CorporationWalletJournalEntry, \
-    CorporationWalletDivision, AllianceToolCharacter, StructureService, BridgeOzoneLevel
+    CorporationWalletDivision, AllianceToolCharacter, StructureService, BridgeOzoneLevel, MapSolarSystem
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Token
 from .esi_workaround import EsiResponseClient
@@ -16,6 +16,7 @@ import requests
 import datetime
 
 logger = logging.getLogger(__name__)
+
 
 # ['esi-characters.read_notifications.v1', 'esi-assets.read_corporation_assets.v1', 'esi-characters.read_corporation_roles.v1', 'esi-wallet.read_corporation_wallets.v1', 'esi-corporations.read_structures.v1', 'esi-universe.read_structures.v1']
 
@@ -35,20 +36,22 @@ def update_character_notifications(character_id):
     at_char = AllianceToolCharacter.objects.get(character__character_id=character_id)
 
     notifications, result = c.Character.get_characters_character_id_notifications(character_id=character_id).result()
-    cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(tzinfo=timezone.utc)
-    last_five_hundred = list(Notification.objects.filter(character=at_char)[:500].values_list('notification_id', flat=True))
+    cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(
+        tzinfo=timezone.utc)
+    last_five_hundred = list(
+        Notification.objects.filter(character=at_char)[:500].values_list('notification_id', flat=True))
 
     mass_notificaitons = []
     for note in notifications:
         if not note.get('notification_id') in last_five_hundred:
             mass_notificaitons.append(Notification(character=at_char,
-                                                    notification_id=note.get('notification_id'),
-                                                    sender_id=note.get('sender_id'),
-                                                    sender_type=note.get('sender_type'),
-                                                    notification_text=note.get('text'),
-                                                    timestamp=note.get('timestamp'),
-                                                    notification_type=note.get('type'),
-                                                    is_read=note.get('is_read')))
+                                                   notification_id=note.get('notification_id'),
+                                                   sender_id=note.get('sender_id'),
+                                                   sender_type=note.get('sender_type'),
+                                                   notification_text=note.get('text'),
+                                                   timestamp=note.get('timestamp'),
+                                                   notification_type=note.get('type'),
+                                                   is_read=note.get('is_read')))
 
     Notification.objects.bulk_create(mass_notificaitons, batch_size=500)
 
@@ -64,16 +67,16 @@ def update_corp_assets(character_id):
     logger.debug("Started assets for: %s" % str(character_id))
 
     def _asset_create(_corp, _asset):
-        return CorpAsset(  corp=_corp,
-                           item_id=_asset.get('item_id'),
-                           blueprint_copy=_asset.get('is_blueprint_copy', None),
-                           singleton=_asset.get('is_singleton'),
-                           location_flag=_asset.get('location_flag'),
-                           location_id=_asset.get('location_id'),
-                           location_type=_asset.get('location_type'),
-                           quantity=_asset.get('quantity'),
-                           type_id=_asset.get('type_id'),
-                           name=_asset.get('name', None))
+        return CorpAsset(corp=_corp,
+                         item_id=_asset.get('item_id'),
+                         blueprint_copy=_asset.get('is_blueprint_copy', None),
+                         singleton=_asset.get('is_singleton'),
+                         location_flag=_asset.get('location_flag'),
+                         location_id=_asset.get('location_id'),
+                         location_type=_asset.get('location_type'),
+                         quantity=_asset.get('quantity'),
+                         type_id=_asset.get('type_id'),
+                         name=_asset.get('name', None))
 
     req_scopes = ['esi-assets.read_corporation_assets.v1', 'esi-characters.read_corporation_roles.v1']
     req_roles = ['CEO', 'Director']
@@ -95,7 +98,7 @@ def update_corp_assets(character_id):
     _character = AllianceToolCharacter.objects.get(character__character_id=character_id)
     _corporation = EveCorporationInfo.objects.get(corporation_id=_character.character.corporation_id)
 
-    CorpAsset.objects.filter(corp=_corporation).delete()  #Nuke!
+    CorpAsset.objects.filter(corp=_corporation).delete()  # Nuke!
 
     assets_for_insert = []
     cache_expires = 0
@@ -103,9 +106,10 @@ def update_corp_assets(character_id):
     total_pages = 1
     while asset_page <= total_pages:
         asset_list, result = c.Assets.get_corporations_corporation_id_assets(corporation_id=_corporation.corporation_id,
-                                                                            page=asset_page).result()
+                                                                             page=asset_page).result()
         total_pages = int(result.headers['X-Pages'])
-        cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(tzinfo=timezone.utc)
+        cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(
+            tzinfo=timezone.utc)
 
         for asset in asset_list:
             assets_for_insert.append(_asset_create(_corporation, asset))
@@ -113,8 +117,8 @@ def update_corp_assets(character_id):
 
     CorpAsset.objects.bulk_create(assets_for_insert, batch_size=500)
     AllianceToolCharacter.objects.filter(character__character_id=character_id).update(
-        next_update_assets = cache_expires,
-        last_update_assets = datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
+        next_update_assets=cache_expires,
+        last_update_assets=datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
 
     return "Finished assets for: %s" % (str(character_id))
 
@@ -161,6 +165,63 @@ def update_names_from_sde():
                 type_names.append(TypeName(type_id=int(spl[0]), name=spl[2]))
 
     TypeName.objects.bulk_create(type_names, batch_size=500)
+
+
+@shared_task
+def update_systems_from_sde():
+    MapSolarSystem.objects.all().delete()
+    # Get needed SDE files
+    sysNames_url = 'https://www.fuzzwork.co.uk/dump/latest/mapSolarSystems.csv.bz2'
+
+    sysNames_req = requests.get(sysNames_url)
+    with open('mapSolarSystems.csv.bz2', 'wb') as iN:
+        iN.write(sysNames_req.content)
+
+    # Decompress SDE files
+    open('mapSolarSystems.csv', 'wb').write(bz2.open('mapSolarSystems.csv.bz2', 'rb').read())
+
+    # Parse file(s) and Update names object(s)
+    system_names = []
+    with open('mapSolarSystems.csv', 'r', encoding='UTF-8') as iN:
+        csv_list = iN.read().split('\n')
+        for row in csv_list[1:]:
+            spl = row.split(',')
+            if len(spl) > 1:
+                try:
+                    sun_type = int(spl[24])
+                except:
+                    sun_type = 6  # yellow
+
+                system_names.append(MapSolarSystem(
+                    regionID=int(spl[0]),
+                    regionName=ItemName.objects.get(item_id=int(spl[0])).name,  # lookup
+                    constellationID=int(spl[1]),
+                    constellationName=ItemName.objects.get(item_id=int(spl[1])).name,  # lookup
+                    solarSystemID=int(spl[2]),
+                    solarSystemName=spl[3],
+                    x=float(spl[4]),
+                    y=float(spl[5]),
+                    z=float(spl[6]),
+                    xMin=float(spl[7]),
+                    xMax=float(spl[8]),
+                    yMin=float(spl[9]),
+                    yMax=float(spl[10]),
+                    zMin=float(spl[11]),
+                    zMax=float(spl[12]),
+                    luminosity=float(spl[13]),
+                    border=int(spl[14]),
+                    fringe=int(spl[15]),
+                    corridor=int(spl[16]),
+                    hub=int(spl[17]),
+                    international=int(spl[18]),
+                    regional=int(spl[19]),
+                    security=float(spl[21]),
+                    radius=float(spl[23]),
+                    sunTypeID=sun_type,
+                    securityClass=spl[25]
+                ))
+
+        MapSolarSystem.objects.bulk_create(system_names, batch_size=500)
 
 
 @shared_task
@@ -220,21 +281,24 @@ def update_corp_wallet_journal(character_id, wallet_division, full_update=False)
     max_pages = 10
 
     if full_update:
-        max_pages=999
+        max_pages = 999
 
-    last_thrity = list(CorporationWalletJournalEntry.objects.filter(date__gt=(datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(days=60))).values_list('entry_id', flat=True))
+    last_thrity = list(CorporationWalletJournalEntry.objects.filter(
+        date__gt=(datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(days=60))).values_list(
+        'entry_id', flat=True))
     while wallet_page <= total_pages and wallet_page < max_pages:
-        journal, result = c.Wallet.get_corporations_corporation_id_wallets_division_journal(corporation_id=_corporation.corporation_id,
-                                                                                            division=wallet_division,
-                                                                                            page=wallet_page).result()
+        journal, result = c.Wallet.get_corporations_corporation_id_wallets_division_journal(
+            corporation_id=_corporation.corporation_id,
+            division=wallet_division,
+            page=wallet_page).result()
         total_pages = int(result.headers['X-Pages'])
-        cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(tzinfo=timezone.utc)
+        cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(
+            tzinfo=timezone.utc)
 
         for transaction in journal:
             _j_ob = journal_db_update(transaction, _division, last_thrity)
             if _j_ob:
                 bulk_wallet_items.append(_j_ob)  # return'd values not needed
-
 
         wallet_page += 1
 
@@ -280,7 +344,8 @@ def update_corp_wallet_division(character_id, full_update=False):  # pagnated re
                               defaults={'balance': division.get('balance')})
 
         if _division_item:
-            update_corp_wallet_journal(character_id, division.get('division'), full_update=full_update) #inline not async
+            update_corp_wallet_journal(character_id, division.get('division'),
+                                       full_update=full_update)  # inline not async
 
     return "Finished wallet divs for: %s" % (str(character_id))
 
@@ -294,19 +359,19 @@ def update_corp_structures(character_id):  # pagnated results
             structure_id=_structure.get('structure_id'),
             corporation=_corporation,
             defaults={
-              'fuel_expires': _structure.get('fuel_expires', None),
-              'next_reinforce_apply': _structure.get('next_reinforce_apply', None),
-              'next_reinforce_weekday': _structure.get('next_reinforce_weekday', None),
-              'profile_id': _structure.get('profile_id', None),
-              'reinforce_hour': _structure.get('reinforce_hour', None),
-              'reinforce_weekday': _structure.get('reinforce_weekday', None),
-              'state': _structure.get('state', None),
-              'state_timer_end': _structure.get('state_timer_end', None),
-              'state_timer_start': _structure.get('state_timer_start', None),
-              'system_id': _structure.get('system_id', None),
-              'type_id': _structure.get('type_id', None),
-              'unanchors_at': _structure.get('unanchors_at', None),
-              'name': _name
+                'fuel_expires': _structure.get('fuel_expires', None),
+                'next_reinforce_apply': _structure.get('next_reinforce_apply', None),
+                'next_reinforce_weekday': _structure.get('next_reinforce_weekday', None),
+                'profile_id': _structure.get('profile_id', None),
+                'reinforce_hour': _structure.get('reinforce_hour', None),
+                'reinforce_weekday': _structure.get('reinforce_weekday', None),
+                'state': _structure.get('state', None),
+                'state_timer_end': _structure.get('state_timer_end', None),
+                'state_timer_start': _structure.get('state_timer_start', None),
+                'system_id': _structure.get('system_id', None),
+                'type_id': _structure.get('type_id', None),
+                'unanchors_at': _structure.get('unanchors_at', None),
+                'name': _name
             })
 
         if _structure_ob:
@@ -320,7 +385,8 @@ def update_corp_structures(character_id):  # pagnated results
 
         return _structure_ob, _created
 
-    req_scopes = ['esi-corporations.read_structures.v1', 'esi-universe.read_structures.v1', 'esi-characters.read_corporation_roles.v1']
+    req_scopes = ['esi-corporations.read_structures.v1', 'esi-universe.read_structures.v1',
+                  'esi-characters.read_corporation_roles.v1']
 
     req_roles = ['CEO', 'Director', 'Station_Manager']
 
@@ -351,21 +417,25 @@ def update_corp_structures(character_id):  # pagnated results
             page=structure_pages).result()
 
         total_pages = int(result.headers['X-Pages'])
-        cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(tzinfo=timezone.utc)
+        cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(
+            tzinfo=timezone.utc)
 
         for structure in structures:
             try:
-                structure_info, result = c.Universe.get_universe_structures_structure_id(structure_id=structure.get('structure_id')).result()
-            except:    # if bad screw it...
+                structure_info, result = c.Universe.get_universe_structures_structure_id(
+                    structure_id=structure.get('structure_id')).result()
+            except:  # if bad screw it...
                 structure_info = False
             structure_ob, created = _structures_db_update(_corporation,
                                                           structure,
-                                                          structure_info['name'] if structure_info else str(structure.get('structure_id')))
+                                                          structure_info['name'] if structure_info else str(
+                                                              structure.get('structure_id')))
             structure_ids.append(structure_ob.structure_id)
 
         structure_pages += 1
 
-    Structure.objects.filter(corporation=_corporation).exclude(structure_id__in=structure_ids).delete()    # structures die/leave
+    Structure.objects.filter(corporation=_corporation).exclude(
+        structure_id__in=structure_ids).delete()  # structures die/leave
 
     AllianceToolCharacter.objects.filter(character__character_id=character_id).update(
         next_update_structs=cache_expires,
@@ -419,13 +489,13 @@ def run_char_updates(self, character_id):
         if character.next_update_structs < dt_now:
             logger.debug(update_corp_structures(character.character.character_id))  # cache expired
     else:
-            logger.debug(update_corp_structures(character.character.character_id))  # new/no info
+        logger.debug(update_corp_structures(character.character.character_id))  # new/no info
 
     if character.next_update_wallet:
         if character.next_update_wallet < dt_now:
             logger.debug(update_corp_wallet_division(character.character.character_id))  # cache expired
     else:
-            logger.debug(update_corp_wallet_division(character.character.character_id, full_update=True))  # new/no info
+        logger.debug(update_corp_wallet_division(character.character.character_id, full_update=True))  # new/no info
 
     if character.next_update_assets:
         if character.next_update_assets < dt_now:
@@ -433,7 +503,7 @@ def run_char_updates(self, character_id):
             if character.next_update_structs:
                 run_ozone_levels.delay(character_id)
     else:
-            logger.debug(update_corp_assets(character.character.character_id))  # new/no info
+        logger.debug(update_corp_assets(character.character.character_id))  # new/no info
 
     return "Finished Update for: %s" % (str(character_id))
 
@@ -444,13 +514,14 @@ def run_ozone_levels(self, character_id):
     _corporation = EveCorporationInfo.objects.get(corporation_id=_character.character.corporation_id)
     _structures = Structure.objects.filter(type_id=35841, corporation=_corporation)
     for structure in _structures:
-        _quantity = CorpAsset.objects.filter(corp=_corporation, location_id=structure.structure_id, type_id=16273).aggregate(ozone=Sum('quantity'))['ozone']
+        _quantity = \
+        CorpAsset.objects.filter(corp=_corporation, location_id=structure.structure_id, type_id=16273).aggregate(
+            ozone=Sum('quantity'))['ozone']
         _used = 0
 
-        if _quantity is None:
-            _quantity = 0
         try:
-            last_ozone = BridgeOzoneLevel.objects.filter(station_id=structure.structure_id).order_by('-date')[:1][0].quantity
+            last_ozone = BridgeOzoneLevel.objects.filter(station_id=structure.structure_id).order_by('-date')[:1][
+                0].quantity
             delta = last_ozone - _quantity
             _used = (delta if _quantity < last_ozone else 0)
         except:

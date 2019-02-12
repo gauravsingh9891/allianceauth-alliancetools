@@ -155,6 +155,35 @@ class TypeName(models.Model):
     type_id = models.BigIntegerField(primary_key=True)
 
 
+class MapSolarSystem(models.Model):
+    regionID = models.BigIntegerField()
+    regionName = models.CharField(max_length=500, null=True, default=None)
+    constellationID = models.BigIntegerField()
+    constellationName = models.CharField(max_length=500, null=True, default=None)
+    solarSystemID = models.BigIntegerField(primary_key=True)
+    solarSystemName = models.CharField(max_length=500)
+    x = models.FloatField()
+    y = models.FloatField()
+    z = models.FloatField()
+    xMin = models.FloatField()
+    xMax = models.FloatField()
+    yMin = models.FloatField()
+    yMax = models.FloatField()
+    zMin = models.FloatField()
+    zMax = models.FloatField()
+    luminosity = models.FloatField()
+    border = models.IntegerField(null=True, default=None)
+    fringe = models.IntegerField(null=True, default=None)
+    corridor = models.IntegerField(null=True, default=None)
+    hub = models.IntegerField(null=True, default=None)
+    international = models.IntegerField(null=True, default=None)
+    regional = models.IntegerField(null=True, default=None)
+    security = models.FloatField()
+    radius = models.FloatField()
+    sunTypeID = models.BigIntegerField()
+    securityClass = models.CharField(max_length=5)
+
+
 # Analytic Models *****************************************************************************************************
 class BridgeOzoneLevel(models.Model):
     id = models.AutoField(primary_key=True)
