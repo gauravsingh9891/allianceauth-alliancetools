@@ -134,6 +134,10 @@ class Asset(models.Model):
 
     class Meta:
         abstract = True
+        indexes = (
+            models.Index(fields=['item_id']),
+            models.Index(fields=['location_id'])
+        )
 
 
 class CorpAsset(Asset):
@@ -182,6 +186,12 @@ class MapSolarSystem(models.Model):
     radius = models.FloatField()
     sunTypeID = models.BigIntegerField()
     securityClass = models.CharField(max_length=5)
+
+    class Meta:
+        indexes = (
+            models.Index(fields=['regionID']),
+            models.Index(fields=['solarSystemID'])
+        )
 
 
 # Analytic Models *****************************************************************************************************
