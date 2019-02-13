@@ -278,15 +278,11 @@ def update_corp_wallet_journal(character_id, wallet_division, full_update=False)
     cache_expires = 0
     wallet_page = 1
     total_pages = 1
-    max_pages = 10
-
-    if full_update:
-        max_pages = 999
 
     last_thrity = list(CorporationWalletJournalEntry.objects.filter(
         date__gt=(datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(days=60))).values_list(
         'entry_id', flat=True))
-    while wallet_page <= total_pages and wallet_page < max_pages:
+    while wallet_page <= total_pages:
         journal, result = c.Wallet.get_corporations_corporation_id_wallets_division_journal(
             corporation_id=_corporation.corporation_id,
             division=wallet_division,
@@ -299,6 +295,11 @@ def update_corp_wallet_journal(character_id, wallet_division, full_update=False)
             _j_ob = journal_db_update(transaction, _division, last_thrity)
             if _j_ob:
                 bulk_wallet_items.append(_j_ob)  # return'd values not needed
+            else:
+                # old!
+                if not full_update:
+                    wallet_page = total_pages
+                    break
 
         wallet_page += 1
 
