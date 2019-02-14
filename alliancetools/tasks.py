@@ -502,22 +502,24 @@ def run_char_updates(self, character_id):
         if character.next_update_assets < dt_now:
             logger.debug(update_corp_assets(character.character.character_id))  # cache expired
             if character.next_update_structs:
-                run_ozone_levels.delay(character_id)
+                run_ozone_levels(character_id)
     else:
         logger.debug(update_corp_assets(character.character.character_id))  # new/no info
 
     return "Finished Update for: %s" % (str(character_id))
 
-
 @shared_task(bind=True, base=QueueOnce)
 def run_ozone_levels(self, character_id):
+    logger.debug("Started Ozone for: %s" % (str(character_id)))
+
     _character = AllianceToolCharacter.objects.get(character__character_id=character_id)
     _corporation = EveCorporationInfo.objects.get(corporation_id=_character.character.corporation_id)
     _structures = Structure.objects.filter(type_id=35841, corporation=_corporation)
     for structure in _structures:
         _quantity = \
-        CorpAsset.objects.filter(corp=_corporation, location_id=structure.structure_id, type_id=16273).aggregate(
-            ozone=Sum('quantity'))['ozone']
+            CorpAsset.objects.filter(corp=_corporation, location_id=structure.structure_id,
+                                     type_id=16273).aggregate(
+                ozone=Sum('quantity'))['ozone']
         _used = 0
 
         try:
@@ -527,5 +529,9 @@ def run_ozone_levels(self, character_id):
             _used = (delta if _quantity < last_ozone else 0)
         except:
             pass
-
-        BridgeOzoneLevel.objects.create(station_id=structure.structure_id, quantity=_quantity, used=_used)
+        try:
+            BridgeOzoneLevel.objects.create(station_id=structure.structure_id, quantity=_quantity, used=_used)
+            return "Finished Ozone for: %s" % (str(character_id))
+        except:
+            return "Failed Ozone for: %s" % (str(character_id))
+            pass  # dont fail for now
