@@ -1,3 +1,4 @@
 include LICENSE
 include README.md
+include alliancetools/swagger.json
 recursive-include alliancetools/templates *
