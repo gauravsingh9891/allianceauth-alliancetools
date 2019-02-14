@@ -33,7 +33,7 @@ def update_character_notifications(character_id):
     req_scopes = ['esi-characters.read_notifications.v1']
 
     token = _get_token(character_id, req_scopes)
-    c = EsiResponseClient(token).get_esi_client(spec_file=SWAGGER_SPEC_PATH, response=True)
+    c = EsiResponseClient(token).get_esi_client(response=True)
 
     at_char = AllianceToolCharacter.objects.get(character__character_id=character_id)
 
@@ -85,7 +85,7 @@ def update_corp_assets(character_id):
 
     token = _get_token(character_id, req_scopes)
 
-    c = EsiResponseClient(token).get_esi_client(spec_file=SWAGGER_SPEC_PATH, response=True)
+    c = EsiResponseClient(token).get_esi_client(response=True)
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
 
@@ -258,7 +258,7 @@ def update_corp_wallet_journal(character_id, wallet_division, full_update=False)
     req_roles = ['CEO', 'Director', 'Accountant', 'Junior_Accountant']
 
     token = _get_token(character_id, req_scopes)
-    c = EsiResponseClient(token).get_esi_client(spec_file=SWAGGER_SPEC_PATH, response=True)
+    c = EsiResponseClient(token).get_esi_client(response=True)
 
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
@@ -323,7 +323,7 @@ def update_corp_wallet_division(character_id, full_update=False):  # pagnated re
     req_roles = ['CEO', 'Director', 'Accountant', 'Junior_Accountant']
 
     token = _get_token(character_id, req_scopes)
-    c = token.get_esi_client(spec_file=SWAGGER_SPEC_PATH)
+    c = token.get_esi_client()
 
     # check roles!
     roles = c.Character.get_characters_character_id_roles(character_id=character_id).result()
@@ -394,7 +394,7 @@ def update_corp_structures(character_id):  # pagnated results
     req_roles = ['CEO', 'Director', 'Station_Manager']
 
     token = _get_token(character_id, req_scopes)
-    c = EsiResponseClient(token).get_esi_client(spec_file=SWAGGER_SPEC_PATH, response=True)
+    c = EsiResponseClient(token).get_esi_client(response=True)
 
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
