@@ -1,4 +1,6 @@
 import logging
+import os
+
 from celery import shared_task
 from .models import CorpAsset, ItemName, TypeName, Structure, Notification, CorporationWalletJournalEntry, \
     CorporationWalletDivision, AllianceToolCharacter, StructureService, BridgeOzoneLevel, MapSolarSystem
@@ -17,7 +19,7 @@ import datetime
 
 logger = logging.getLogger(__name__)
 
-
+SWAGGER_SPEC_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'swagger.json')
 # ['esi-characters.read_notifications.v1', 'esi-assets.read_corporation_assets.v1', 'esi-characters.read_corporation_roles.v1', 'esi-wallet.read_corporation_wallets.v1', 'esi-corporations.read_structures.v1', 'esi-universe.read_structures.v1']
 
 def _get_token(character_id, scopes):
@@ -31,7 +33,7 @@ def update_character_notifications(character_id):
     req_scopes = ['esi-characters.read_notifications.v1']
 
     token = _get_token(character_id, req_scopes)
-    c = EsiResponseClient(token).get_esi_client(version='latest', response=True)
+    c = EsiResponseClient(token).get_esi_client(spec_file=SWAGGER_SPEC_PATH, response=True)
 
     at_char = AllianceToolCharacter.objects.get(character__character_id=character_id)
 
@@ -83,7 +85,7 @@ def update_corp_assets(character_id):
 
     token = _get_token(character_id, req_scopes)
 
-    c = EsiResponseClient(token).get_esi_client(version='latest', response=True)
+    c = EsiResponseClient(token).get_esi_client(spec_file=SWAGGER_SPEC_PATH, response=True)
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
 
@@ -256,7 +258,7 @@ def update_corp_wallet_journal(character_id, wallet_division, full_update=False)
     req_roles = ['CEO', 'Director', 'Accountant', 'Junior_Accountant']
 
     token = _get_token(character_id, req_scopes)
-    c = EsiResponseClient(token).get_esi_client(version='latest', response=True)
+    c = EsiResponseClient(token).get_esi_client(spec_file=SWAGGER_SPEC_PATH, response=True)
 
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
@@ -321,7 +323,7 @@ def update_corp_wallet_division(character_id, full_update=False):  # pagnated re
     req_roles = ['CEO', 'Director', 'Accountant', 'Junior_Accountant']
 
     token = _get_token(character_id, req_scopes)
-    c = token.get_esi_client(version='latest')
+    c = token.get_esi_client(spec_file=SWAGGER_SPEC_PATH)
 
     # check roles!
     roles = c.Character.get_characters_character_id_roles(character_id=character_id).result()
@@ -392,7 +394,7 @@ def update_corp_structures(character_id):  # pagnated results
     req_roles = ['CEO', 'Director', 'Station_Manager']
 
     token = _get_token(character_id, req_scopes)
-    c = EsiResponseClient(token).get_esi_client(version='latest', response=True)
+    c = EsiResponseClient(token).get_esi_client(spec_file=SWAGGER_SPEC_PATH, response=True)
 
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
@@ -502,7 +504,7 @@ def run_char_updates(self, character_id):
         if character.next_update_assets < dt_now:
             logger.debug(update_corp_assets(character.character.character_id))  # cache expired
             if character.next_update_structs:
-                run_ozone_levels(character_id)
+                logger.debug(run_ozone_levels(character_id))
     else:
         logger.debug(update_corp_assets(character.character.character_id))  # new/no info
 
