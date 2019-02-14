@@ -474,7 +474,7 @@ def check_for_updates():
         run_char_updates.delay(character.character.character_id)
 
 
-@shared_task(bind=True, base=QueueOnce)
+@shared_task(bind=True, base=QueueOnce, autoretry_for=(Exception,), exponential_backoff=2, retry_kwargs={'max_retries': 4})
 def run_char_updates(self, character_id):
     logger.debug("Started update for: %s" % (str(character_id)))
 
