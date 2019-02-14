@@ -533,7 +533,6 @@ def run_ozone_levels(self, character_id):
             pass
         try:
             BridgeOzoneLevel.objects.create(station_id=structure.structure_id, quantity=_quantity, used=_used)
-            return "Finished Ozone for: %s" % (str(character_id))
         except:
-            return "Failed Ozone for: %s" % (str(character_id))
             pass  # dont fail for now
+    return "Finished Ozone for: %s" % (str(character_id))
