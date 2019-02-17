@@ -27,7 +27,7 @@ def dashboard(request):
 
         context = {
             'alts': main_characters,
-            'add_tokens' : True
+            'add_tokens' : request.user.has_perm('alliancetools.admin_alliance_tools')
         }
         return render(request, 'alliancetools/dashboard.html', context=context)
 
@@ -62,7 +62,7 @@ def structures(request):
 
         context = {
             'structures': structures,
-            'add_tokens' : True,
+            'add_tokens' : request.user.has_perm('alliancetools.admin_alliance_tools'),
             'view_fittings' : request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings')
         }
         return render(request, 'alliancetools/structures.html', context=context)
