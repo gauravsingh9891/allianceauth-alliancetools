@@ -379,9 +379,9 @@ def update_corp_structures(character_id):  # pagnated results
 
         if _structure_ob:
             if _structure.get('services'):
+                StructureService.objects.filter(structure=_structure_ob).delete()
                 for service in _structure.get('services'):
-                    StructureService.objects.filter(structure=_structure_ob).delete()
-                    _service_ob, created = StructureService.objects.update_or_create(
+                    _service_ob = StructureService.objects.create(
                         structure=_structure_ob,
                         state=service['state'],
                         name=service['name'])

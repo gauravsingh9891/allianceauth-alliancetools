@@ -23,6 +23,8 @@ class AllianceToolCharacter(models.Model):
 
     class Meta:
         permissions = (('access_alliance_tools', 'Can access alliance_tools'),
+                       ('access_alliance_tools_structures', 'Can access structures'),
+                       ('access_alliance_tools_structure_fittings', 'Can access structure fittings'),
                        ('admin_alliance_tools', 'Can add tokens to alliance tools'))
 
 
@@ -101,7 +103,20 @@ class Structure(models.Model):
 
     #extra
     name = models.CharField(max_length=150, choices=_state_enum)
-    ozone_level = models.IntegerField(null=True, default=None)
+
+    @property
+    def services(self):
+        return StructureService.objects.filter(structure=self)
+
+    @property
+    def system(self):
+        return MapSolarSystem.objects.get(solarSystemID=self.system_id)
+
+    @property
+    def ozone_level(self):
+        last_ozone = BridgeOzoneLevel.objects.filter(station_id=self.structure_id).order_by('-date')[:1][
+            0].quantity
+        return last_ozone
 
 
 class StructureService(models.Model):

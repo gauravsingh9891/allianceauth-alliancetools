@@ -1,0 +1,70 @@
+{% extends 'alliancetools/base.html' %}
+{% load i18n %}
+{% load static %}
+{% load humanize %}
+{% load alliancetools_tags %}
+{% block at_block %}
+    {% if structures %}
+            <div class="panel-body">
+                <div class="row panel panel-default">
+                    <div class="panel-heading">Structure List</div>
+                    <table id="table-structs" class="table table-hover dataTable">
+                        <thead>
+                            <th class="text-center"></th>
+                            <th class="text-center">Structure</th>
+                            <th class="text-center">Fuel Expires</th>
+                            <th class="text-center">Services</th>
+                            <th class="text-center">State</th>
+                        </thead>
+                        <tbody>
+                        {% for structure in structures %}
+                        <tr>
+                            <td class="text-center"><a href="{% url 'alliancetools:structure' structure.structure_id %}"><img class="ra-avatar img-circle" src="https://image.eveonline.com/Type/{{ structure.type_id }}_64.png"></a></td>
+                            <td class="text-center"><a href="{% url 'alliancetools:structure' structure.structure_id %}">{{ structure.name }}</a></br>
+                                <span class="label label-info">{{ structure.type_id|type_name }}</span></br>
+                                <span class="label label-default">{{ structure.corporation.corporation_name }}</span></td>
+                            <td class="text-center">{{ structure.fuel_expires|date:"Y-m-d" }}</br>
+                                <span class="label label-default">{{ structure.fuel_expires|timeuntil }}</span>
+                                {% if structure.type_id == 35841 %}</br><span class="label {% if structure.ozone_level < 1000000 %}label-warning {% else %}label-default{% endif %}">Liquid Ozone: {{ structure.ozone_level|intcomma  }}</span>
+                            {% endif %}</td>
+                            <td class="text-center">{% for service in structure.services %}
+                                {% if service.state == 'online' %}
+                                    <span class="label label-primary">{{ service.name }}</span>
+                                {% else %}
+                                    <span class="label label-danger">{{ service.name }}</span>
+                                {% endif %}
+                            {% endfor %}</td>
+                            <td class="text-center">{{ structure.state|deslug|title }}</td>
+                        </tr>
+                        {% empty %}
+
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+    {% else %}
+    <div class="alert alert-warning text-center">{% trans "No Tokens Loaded." %}</div>
+    {% endif %}
+{% endblock %}
+{% block extra_javascript %}
+    {% include 'bundles/datatables-js.html' %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.bundle.min.js"></script>
+{% endblock %}
+{% block extra_css %}
+    {% include 'bundles/datatables-css.html' %}
+{% endblock %}
+{% block extra_script %}
+    $(document).ready(function() {
+        $('#table-structs').DataTable({
+            "columnDefs": [
+                { "searchable": false, "targets": [0] },
+                { "sortable": false, "targets": [0] },
+            ],
+            "order": [
+                [1, "desc"]
+            ],
+            "pageLength": 25
+        });
+    });
+{% endblock %}
