@@ -250,10 +250,10 @@
             </div>
         </div>
         <div class="row">
-          <div class="panel panel-default col-sm-12 col-md-8 col-md-offset-2">
+          <div class="panel col-sm-12 col-md-8 col-md-offset-2">
             <div class="panel-heading">
-              <h4 class="panel-title">
-                <a data-toggle="collapse"href="#collapse1">Buyall List</a>
+              <h4 class="panel-title text-center">
+                <a data-toggle="collapse"href="#collapse1">Buy All List</a>
               </h4>
             </div>
             <div id="collapse1"class="panel-collapse collapse ">
@@ -267,7 +267,6 @@
                     {% if fittings.LoSlot5 %}{{fittings.LoSlot5.type_id|type_name}}</br>{% endif %}
                     {% if fittings.LoSlot6 %}{{fittings.LoSlot6.type_id|type_name}}</br>{% endif %}
                     {% if fittings.LoSlot7 %}{{fittings.LoSlot7.type_id|type_name}}</br>{% endif %}
-                    </br>
                     {% if fittings.MedSlot0 %}{{fittings.MedSlot0.type_id|type_name}}</br>{% endif %}
                     {% if fittings.MedSlot1 %}{{fittings.MedSlot1.type_id|type_name}}</br>{% endif %}
                     {% if fittings.MedSlot2 %}{{fittings.MedSlot2.type_id|type_name}}</br>{% endif %}
@@ -276,7 +275,6 @@
                     {% if fittings.MedSlot5 %}{{fittings.MedSlot5.type_id|type_name}}</br>{% endif %}
                     {% if fittings.MedSlot6 %}{{fittings.MedSlot6.type_id|type_name}}</br>{% endif %}
                     {% if fittings.MedSlot7 %}{{fittings.MedSlot7.type_id|type_name}}</br>{% endif %}
-                    </br>
                     {% if fittings.HiSlot0 %}{{fittings.HiSlot0.type_id|type_name}}</br>{% endif %}
                     {% if fittings.HiSlot1 %}{{fittings.HiSlot1.type_id|type_name}}</br>{% endif %}
                     {% if fittings.HiSlot2 %}{{fittings.HiSlot2.type_id|type_name}}</br>{% endif %}
@@ -285,11 +283,9 @@
                     {% if fittings.HiSlot5 %}{{fittings.HiSlot5.type_id|type_name}}</br>{% endif %}
                     {% if fittings.HiSlot6 %}{{fittings.HiSlot6.type_id|type_name}}</br>{% endif %}
                     {% if fittings.HiSlot7 %}{{fittings.HiSlot7.type_id|type_name}}</br>{% endif %}
-                    </br>
                     {% if fittings.RigSlot0 %}{{fittings.RigSlot0.type_id|type_name}}</br>{% endif %}
                     {% if fittings.RigSlot1 %}{{fittings.RigSlot1.type_id|type_name}}</br>{% endif %}
                     {% if fittings.RigSlot2 %}{{fittings.RigSlot2.type_id|type_name}}</br>{% endif %}
-                    </br>
                     {% if fittings.ServiceSlot0 %}{{fittings.ServiceSlot0.type_id|type_name}}</br>{% endif %}
                     {% if fittings.ServiceSlot1 %}{{fittings.ServiceSlot1.type_id|type_name}}</br>{% endif %}
                     {% if fittings.ServiceSlot2 %}{{fittings.ServiceSlot2.type_id|type_name}}</br>{% endif %}
@@ -298,21 +294,17 @@
                     {% if fittings.ServiceSlot5 %}{{fittings.ServiceSlot5.type_id|type_name}}</br>{% endif %}
                     {% if fittings.ServiceSlot6 %}{{fittings.ServiceSlot6.type_id|type_name}}</br>{% endif %}
                     {% if fittings.ServiceSlot7 %}{{fittings.ServiceSlot7.type_id|type_name}}</br>{% endif %}
-                    </br>
                     {% if fittings.FighterTube0 %}{{fittings.FighterTube0.type_id|type_name}}</br>{% endif %}
                     {% if fittings.FighterTube1 %}{{fittings.FighterTube1.type_id|type_name}}</br>{% endif %}
                     {% if fittings.FighterTube2 %}{{fittings.FighterTube2.type_id|type_name}}</br>{% endif %}
                     {% if fittings.FighterTube3 %}{{fittings.FighterTube3.type_id|type_name}}</br>{% endif %}
                     {% if fittings.FighterTube4 %}{{fittings.FighterTube4.type_id|type_name}}</br>{% endif %}
-                    </br>
                     {% for ammo in fittings.Cargo %}
                         {{ammo.type_id|type_name}} x{{ammo.quantity}}</br>
                     {% endfor %}
-                    </br>
                     {% for fighter in fittings.FighterBay %}
                         {{fighter.type_id|type_name}} x{{fighter.quantity}}</br>
                     {% endfor %}
-                    </br>
                     {% for fuel in fittings.StructureFuel %}
                         {{fuel.type_id|type_name}} x{{fuel.quantity}}</br>
                     {% endfor %}
