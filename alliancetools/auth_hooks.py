@@ -11,7 +11,7 @@ class AllianceMenu(MenuItemHook):
                               navactive=['alliancetools:dashboard'])
 
     def render(self, request):
-        if request.user.has_perm('alliancetools.access_alliance_tools'):
+        if request.user.has_perm('alliancetools.admin_alliance_tools'):
             return MenuItemHook.render(self, request)
         return ''
 
@@ -24,7 +24,7 @@ class StructureMenu(MenuItemHook):
                               navactive=['alliancetools:structures'])
 
     def render(self, request):
-        if request.user.has_perm('alliancetools.access_alliance_tools'):
+        if request.user.has_perm('alliancetools.access_alliance_tools_structures'):
             return MenuItemHook.render(self, request)
         return ''
 

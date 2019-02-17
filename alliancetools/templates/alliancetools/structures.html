@@ -19,8 +19,8 @@
                         <tbody>
                         {% for structure in structures %}
                         <tr>
-                            <td class="text-center"><a href="{% url 'alliancetools:structure' structure.structure_id %}"><img class="ra-avatar img-circle" src="https://image.eveonline.com/Type/{{ structure.type_id }}_64.png"></a></td>
-                            <td class="text-center"><a href="{% url 'alliancetools:structure' structure.structure_id %}">{{ structure.name }}</a></br>
+                            <td class="text-center">{% if view_fittings %}<a href="{% url 'alliancetools:structure' structure.structure_id %}">{% endif %}<img class="ra-avatar img-circle" src="https://image.eveonline.com/Type/{{ structure.type_id }}_64.png">{% if view_fittings %}</a>{% endif %}</td>
+                            <td class="text-center">{% if view_fittings %}<a href="{% url 'alliancetools:structure' structure.structure_id %}">{% endif %}{{ structure.name }}{% if view_fittings %}</a>{% endif %}</br>
                                 <span class="label label-info">{{ structure.type_id|type_name }}</span></br>
                                 <span class="label label-default">{{ structure.corporation.corporation_name }}</span></td>
                             <td class="text-center">{{ structure.fuel_expires|date:"Y-m-d" }}</br>

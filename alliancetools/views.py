@@ -57,22 +57,23 @@ def structures(request):
     main_char = request.user.profile.main_character
 
     try:
+
         structures = Structure.objects.all()
 
         context = {
             'structures': structures,
-            'add_tokens' : True
+            'add_tokens' : True,
+            'view_fittings' : request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings')
         }
         return render(request, 'alliancetools/structures.html', context=context)
 
     except:
         logging.exception("message")
 
-    return render(request, 'alliancetools/dashboard.html')
+    return render(request, 'alliancetools/structures.html')
 
 
 @login_required
-@permission_required('alliancetools.access_alliance_tools_structures')
 @permission_required('alliancetools.access_alliance_tools_structure_fittings')
 def structure(request, structure_id=None):
     try:
