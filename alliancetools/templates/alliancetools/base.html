@@ -2,6 +2,8 @@
 {% load i18n %}
 {% block page_title %}{% trans "Alliance Toolbox!" %}{% endblock %}
 {% block extra_css %}
+{% include 'bundles/datatables-css.html' %}
+
  <style>
 .flex-container {
     display: flex;
@@ -18,6 +20,9 @@
 }
 .flex-item {
 
+}
+.form-control {
+    margin: 2px;
 }
 </style>
 {% endblock extra_css %}
