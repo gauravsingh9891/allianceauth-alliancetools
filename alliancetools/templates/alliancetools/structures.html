@@ -28,7 +28,7 @@
                         <span class="label label-default">{{ structure.fuel_expires|timeuntil }}</span>
                         {% if structure.type_id == 35841 %}</br><span class="label {% if structure.ozone_level < 1000000 %}label-warning {% else %}label-default{% endif %}">Liquid Ozone: {{ structure.ozone_level|intcomma  }}</span>
                     {% endif %}</td>
-                    <td class="text-center">{% for service in structure.services %}
+                    <td class="text-center">{% for service in structure.structureservice_set.all %}
                         {% if service.state == 'online' %}
                             <span class="label label-primary">{{ service.name }}</span>
                         {% else %}

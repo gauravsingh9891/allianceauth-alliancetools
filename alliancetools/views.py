@@ -58,7 +58,7 @@ def structures(request):
 
     try:
 
-        structures = Structure.objects.all()
+        structures = Structure.objects.prefetch_related('structureservice_set').all()
 
         context = {
             'structures': structures,
