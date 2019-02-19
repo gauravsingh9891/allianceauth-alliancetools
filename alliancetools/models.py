@@ -3,6 +3,52 @@ from model_utils import Choices
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
 
+# Name Class
+class ItemName(models.Model):
+    name = models.CharField(max_length=500)
+    item_id = models.BigIntegerField(primary_key=True)
+
+
+class TypeName(models.Model):
+    name = models.CharField(max_length=500)
+    type_id = models.BigIntegerField(primary_key=True)
+
+
+class MapSolarSystem(models.Model):
+    regionID = models.BigIntegerField()
+    regionName = models.CharField(max_length=500, null=True, default=None)
+    constellationID = models.BigIntegerField()
+    constellationName = models.CharField(max_length=500, null=True, default=None)
+    solarSystemID = models.BigIntegerField(primary_key=True)
+    solarSystemName = models.CharField(max_length=500)
+    x = models.FloatField()
+    y = models.FloatField()
+    z = models.FloatField()
+    xMin = models.FloatField()
+    xMax = models.FloatField()
+    yMin = models.FloatField()
+    yMax = models.FloatField()
+    zMin = models.FloatField()
+    zMax = models.FloatField()
+    luminosity = models.FloatField()
+    border = models.IntegerField(null=True, default=None)
+    fringe = models.IntegerField(null=True, default=None)
+    corridor = models.IntegerField(null=True, default=None)
+    hub = models.IntegerField(null=True, default=None)
+    international = models.IntegerField(null=True, default=None)
+    regional = models.IntegerField(null=True, default=None)
+    security = models.FloatField()
+    radius = models.FloatField()
+    sunTypeID = models.BigIntegerField()
+    securityClass = models.CharField(max_length=5)
+
+    class Meta:
+        indexes = (
+            models.Index(fields=['regionID']),
+            models.Index(fields=['solarSystemID'])
+        )
+
+
 # Wallet Models *****************************************************************************************************
 class AllianceToolCharacter(models.Model):
     character = models.ForeignKey(EveCharacter, on_delete=models.CASCADE)
@@ -103,6 +149,8 @@ class Structure(models.Model):
 
     #extra
     name = models.CharField(max_length=150, choices=_state_enum)
+    system_name = models.ForeignKey(MapSolarSystem, on_delete=models.SET_NULL, null=True, default=None)
+    type_name = models.ForeignKey(TypeName, on_delete=models.SET_NULL, null=True, default=None)
 
     @property
     def services(self):
@@ -161,52 +209,6 @@ class CorpAsset(Asset):
     def __str__(self):
         return '{2} {0}x{1} ({3} / {4})'.format(self.type_id, self.quantity, self.corp,
                                                 self.location_id, self.location_type)
-
-
-# Name Class
-class ItemName(models.Model):
-    name = models.CharField(max_length=500)
-    item_id = models.BigIntegerField(primary_key=True)
-
-
-class TypeName(models.Model):
-    name = models.CharField(max_length=500)
-    type_id = models.BigIntegerField(primary_key=True)
-
-
-class MapSolarSystem(models.Model):
-    regionID = models.BigIntegerField()
-    regionName = models.CharField(max_length=500, null=True, default=None)
-    constellationID = models.BigIntegerField()
-    constellationName = models.CharField(max_length=500, null=True, default=None)
-    solarSystemID = models.BigIntegerField(primary_key=True)
-    solarSystemName = models.CharField(max_length=500)
-    x = models.FloatField()
-    y = models.FloatField()
-    z = models.FloatField()
-    xMin = models.FloatField()
-    xMax = models.FloatField()
-    yMin = models.FloatField()
-    yMax = models.FloatField()
-    zMin = models.FloatField()
-    zMax = models.FloatField()
-    luminosity = models.FloatField()
-    border = models.IntegerField(null=True, default=None)
-    fringe = models.IntegerField(null=True, default=None)
-    corridor = models.IntegerField(null=True, default=None)
-    hub = models.IntegerField(null=True, default=None)
-    international = models.IntegerField(null=True, default=None)
-    regional = models.IntegerField(null=True, default=None)
-    security = models.FloatField()
-    radius = models.FloatField()
-    sunTypeID = models.BigIntegerField()
-    securityClass = models.CharField(max_length=5)
-
-    class Meta:
-        indexes = (
-            models.Index(fields=['regionID']),
-            models.Index(fields=['solarSystemID'])
-        )
 
 
 # Analytic Models *****************************************************************************************************

@@ -374,7 +374,9 @@ def update_corp_structures(character_id):  # pagnated results
                 'system_id': _structure.get('system_id', None),
                 'type_id': _structure.get('type_id', None),
                 'unanchors_at': _structure.get('unanchors_at', None),
-                'name': _name
+                'name': _name,
+                'system_name': MapSolarSystem.objects.get(solarSystemID=_structure.get('system_id', None)),
+                'type_name': TypeName.objects.get(type_id=_structure.get('type_id', None))
             })
 
         if _structure_ob:
