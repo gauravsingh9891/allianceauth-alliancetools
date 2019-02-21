@@ -322,7 +322,7 @@ def update_corp_wallet_journal(character_id, wallet_division, full_update=False)
             if first_name:
                 _journal_item.first_party_name_id=_transaction.get('first_party_id')
             if second_name:
-                _journal_item.first_party_name_id=_transaction.get('first_party_id')
+                _journal_item.second_party_name_id=_transaction.get('second_party_id')
 
 
             return _journal_item
