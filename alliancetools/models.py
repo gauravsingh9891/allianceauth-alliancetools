@@ -4,6 +4,16 @@ from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
 
 # Name Class
+class EveName(models.Model):
+    eve_id = models.BigIntegerField(primary_key=True)
+    name = models.CharField(max_length=500)
+    category = models.CharField(max_length=500)
+
+    #optionals for character
+    corp = models.CharField(max_length=500, null=True, default=None)
+    alliance = models.CharField(max_length=500, null=True, default=None)
+
+
 class ItemName(models.Model):
     name = models.CharField(max_length=500)
     item_id = models.BigIntegerField(primary_key=True)
@@ -93,6 +103,9 @@ class WalletJournalEntry(models.Model):
     tax = models.DecimalField(max_digits=20, decimal_places=2, null=True, default=None)
     tax_reciever_id = models.IntegerField(null=True, default=None)
 
+    first_party_name = models.ForeignKey(EveName, on_delete=models.SET_NULL, null=True, default=None, related_name='first_party_evename')
+    second_party_name = models.ForeignKey(EveName, on_delete=models.SET_NULL, null=True, default=None, related_name='second_party_evename')
+
     class Meta:
         abstract = True
         indexes = (
@@ -155,10 +168,6 @@ class Structure(models.Model):
     @property
     def services(self):
         return StructureService.objects.filter(structure=self)
-
-    @property
-    def system(self):
-        return MapSolarSystem.objects.get(solarSystemID=self.system_id)
 
     @property
     def ozone_level(self):

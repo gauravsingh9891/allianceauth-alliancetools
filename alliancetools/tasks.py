@@ -3,7 +3,7 @@ import os
 
 from celery import shared_task
 from .models import CorpAsset, ItemName, TypeName, Structure, Notification, CorporationWalletJournalEntry, \
-    CorporationWalletDivision, AllianceToolCharacter, StructureService, BridgeOzoneLevel, MapSolarSystem
+    CorporationWalletDivision, AllianceToolCharacter, StructureService, BridgeOzoneLevel, MapSolarSystem, EveName
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Token
 from .esi_workaround import EsiResponseClient
@@ -16,6 +16,7 @@ import bz2
 import re
 import requests
 import datetime
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,51 @@ SWAGGER_SPEC_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sw
 
 def _get_token(character_id, scopes):
     return Token.objects.filter(character_id=character_id).require_scopes(scopes)[0]
+
+
+def _get_new_eve_name(entity_id):
+
+    custom_headers = {'Content-Type': 'application/json'}
+    custom_data = [entity_id]
+    r = requests.post("https://esi.evetech.net/latest/universe/names/?datasource=tranquility",
+                  headers=custom_headers,
+                  data=json.dumps(custom_data))
+    result = r.json()
+    name = result[0].get('name', "")
+    category = result[0].get('category', "")
+    id = result[0].get('id', "")
+
+    if int(id) == int(entity_id):
+        new_name = EveName(name=name, category=category, eve_id=id)
+        if category == "character":
+            url = "https://esi.evetech.net/latest/characters/%s/?datasource=tranquility" % str(id)
+            r = requests.get(url)
+            result = r.json()
+            if result.get('alliance_id', False):
+                custom_data = [result.get('alliance_id'), result.get('corporation_id')]
+                r = requests.post("https://esi.evetech.net/latest/universe/names/?datasource=tranquility",
+                                  headers=custom_headers,
+                                  data=json.dumps(custom_data))
+                result = r.json()
+                for name in result:
+                    if name.get('category') == "corporation":
+                        new_name.corp = name.get('name')
+                    if name.get('category') == "alliance":
+                        new_name.alliance = name.get('name')
+
+            elif result.get('corporation_id', False):
+                custom_data = [result.get('corporation_id')]
+                r = requests.post("https://esi.evetech.net/latest/universe/names/?datasource=tranquility",
+                                  headers=custom_headers,
+                                  data=json.dumps(custom_data))
+                result = r.json()
+                new_name.corp = result[0].get('name')
+        return new_name
+    else:
+        return False
+
+
+
 
 
 @shared_task
@@ -230,10 +276,33 @@ def update_systems_from_sde():
 def update_corp_wallet_journal(character_id, wallet_division, full_update=False):  # pagnated results
     logger.debug("Started wallet trans for: %s (%s)" % (str(character_id), str(wallet_division)))
 
-    def journal_db_update(_transaction, _division, existing_id):
+    def journal_db_update(_transaction, _division, existing_id, name_ids):
         # print("Length Eid's: %s" % str(len(existing_id)))
 
+        first_name = False
+        second_name = False
+
         if not _transaction.get('id') in existing_id:
+            try:
+                if _transaction.get('second_party_id') and _transaction.get('second_party_id') not in name_ids:
+                    _get_new_eve_name(_transaction.get('second_party_id')).save()
+                    name_ids.append(_transaction.get('second_party_id'))
+                    second_name = True
+                elif _transaction.get('second_party_id') and _transaction.get('second_party_id') in name_ids:
+                    second_name = True
+            except Exception as e:
+                print(e)
+
+            try:
+                if _transaction.get('first_party_id') and _transaction.get('first_party_id') not in name_ids:
+                    _get_new_eve_name(_transaction.get('first_party_id')).save()
+                    name_ids.append(_transaction.get('first_party_id'))
+                    first_name = True
+                elif _transaction.get('first_party_id') and _transaction.get('first_party_id') in name_ids:
+                    first_name = True
+            except Exception as e:
+                print(e)
+
             _journal_item = CorporationWalletJournalEntry(
                 division=_division,
                 entry_id=_transaction.get('id'),
@@ -249,6 +318,13 @@ def update_corp_wallet_journal(character_id, wallet_division, full_update=False)
                 second_party_id=_transaction.get('second_party_id'),
                 tax=_transaction.get('tax'),
                 tax_reciever_id=_transaction.get('tax_reciever_id'))
+
+            if first_name:
+                _journal_item.first_party_name_id=_transaction.get('first_party_id')
+            if second_name:
+                _journal_item.first_party_name_id=_transaction.get('first_party_id')
+
+
             return _journal_item
         else:
             return False
@@ -280,7 +356,7 @@ def update_corp_wallet_journal(character_id, wallet_division, full_update=False)
     cache_expires = 0
     wallet_page = 1
     total_pages = 1
-
+    name_ids = list(EveName.objects.all().values_list('eve_id', flat=True))
     last_thrity = list(CorporationWalletJournalEntry.objects.filter(
         date__gt=(datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(days=60))).values_list(
         'entry_id', flat=True))
@@ -294,7 +370,7 @@ def update_corp_wallet_journal(character_id, wallet_division, full_update=False)
             tzinfo=timezone.utc)
 
         for transaction in journal:
-            _j_ob = journal_db_update(transaction, _division, last_thrity)
+            _j_ob = journal_db_update(transaction, _division, last_thrity, name_ids)
             if _j_ob:
                 bulk_wallet_items.append(_j_ob)  # return'd values not needed
             else:
