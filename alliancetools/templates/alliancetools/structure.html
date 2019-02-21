@@ -109,7 +109,7 @@
 
                 <div class="col-sm-4 col-md-4 text-center">
                     <h4>Fuel Expires</h4>
-                    <p>{{structure.fuel_expires|date}}</p>
+                    <p>{{structure.fuel_expires|date:"Y-m-d H:i.s"}}</p>
                 </div>
                 <div class="col-sm-4 col-md-4 text-center">
                     <h4>Reinforce Time</h4>
@@ -126,11 +126,11 @@
                 </div>
                 <div class="col-sm-4 col-md-4 text-center">
                     <h4>State Timer Start</h4>
-                    <p>{% if structure.state_timer_start %}{{structure.state_timer_start|date}} {% else %}No Timer{% endif %}</p>
+                    <p>{% if structure.state_timer_start %}{{structure.state_timer_start|date:"Y-m-d H:i.s"}} {% else %}No Timer{% endif %}</p>
                 </div>
                 <div class="col-sm-4 col-md-4 text-center">
                     <h4>State Timer End</h4>
-                    <p>{% if structure.state_timer_end %}{{structure.state_timer_end|date}} {% else %}No Timer{% endif %}</p>
+                    <p>{% if structure.state_timer_end %}{{structure.state_timer_end|date:"Y-m-d H:i.s"}} {% else %}No Timer{% endif %}</p>
                 </div>
             </div>
         </div>
