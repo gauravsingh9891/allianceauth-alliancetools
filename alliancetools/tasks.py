@@ -64,6 +64,18 @@ def _get_new_eve_name(entity_id):
                                   data=json.dumps(custom_data))
                 result = r.json()
                 new_name.corp = result[0].get('name')
+        if category == "corporation":
+            url = "https://esi.evetech.net/latest/characters/%s/?datasource=tranquility" % str(id)
+            r = requests.get(url)
+            result = r.json()
+            if result.get('alliance_id', False):
+                custom_data = [result.get('alliance_id')]
+                r = requests.post("https://esi.evetech.net/latest/universe/names/?datasource=tranquility",
+                                  headers=custom_headers,
+                                  data=json.dumps(custom_data))
+                result = r.json()
+                new_name.alliance = result[0].get('name')
+
         return new_name
     else:
         return False
