@@ -15,15 +15,16 @@
                 {% for job in jobs%}
                     <div class=" col-xs-12 col-sm-6 col-md-4">
                         <div class="flex-item  col-xs-12 col-sm-12 col-md-12">
-                            <div class="text-center col-xs-12 col-sm-4 col-md-4">
-                                <img class="ra-avatar img-circle" src="https://image.eveonline.com/Character/{{ job.creator.character_id }}_128.jpg">
-                            </div>
-                            <div class="col-xs-12 col-sm-7 col-md-8">
+                            <table class="col-xs-12 col-sm-12 col-md-12">
+                                <tr><td><img style="margin:10px;" class="ra-avatar img-circle" src="https://image.eveonline.com/Character/{{ job.creator.character_id }}_64.jpg">
+                            </td>
+                            <td>
                                 <h4>{{ job.title }}</h4>
                                 <p><b>Creator:</b> {{ job.creator.character_name }}</p>
                                 <p><b>Created on:</b> {{ job.created|date:"Y-m-d H:i.s" }}</p>
                                 <p>{% if job.description %}{{ job.description }}{% else %}{{ job.title }}{% endif %}</p>
-                            </div>
+                            </td></tr>
+                            </table>
                             <a class="btn btn-success col-xs-6 col-sm-5 col-md-5" type="button" href="{% url 'alliancetools:mark_complete' job.id%}" title="Mark Complete">Mark Complete</a>
                             <a class="btn btn-primary col-xs-6 col-sm-5 col-md-5 col-md-offset-2 col-sm-offset-2" type="button" href="{% url 'alliancetools:add_comment' job.id%}" title="Add Comment">Add Comment</a>
                             {% with comments=job.last_comments %}
