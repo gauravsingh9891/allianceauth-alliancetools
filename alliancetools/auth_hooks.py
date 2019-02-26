@@ -29,6 +29,19 @@ class StructureMenu(MenuItemHook):
         return ''
 
 
+class JobsMenu(MenuItemHook):
+    def __init__(self):
+        MenuItemHook.__init__(self, 'Job Board',
+                              'fa fa-tasks fa-fw',
+                              'alliancetools:jobs_board',
+                              navactive=['alliancetools:jobs_board'])
+
+    def render(self, request):
+        if request.user.has_perm('alliancetools.add_alliancetooljobcomment'):
+            return MenuItemHook.render(self, request)
+        return ''
+
+
 @hooks.register('menu_item_hook')
 def register_menu():
     return AllianceMenu()
@@ -37,6 +50,11 @@ def register_menu():
 @hooks.register('menu_item_hook')
 def register_menu():
     return StructureMenu()
+
+
+@hooks.register('menu_item_hook')
+def register_menu():
+    return JobsMenu()
 
 
 @hooks.register('url_hook')

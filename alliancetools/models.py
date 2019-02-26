@@ -227,3 +227,27 @@ class BridgeOzoneLevel(models.Model):
     quantity = models.BigIntegerField()
     used = models.BigIntegerField(default=0)
     date = models.DateTimeField(auto_now=True)
+
+
+# tasks models ********************************************************************************************************
+class AllianceToolJob(models.Model):
+    creator = models.ForeignKey(EveCharacter, on_delete=models.SET_NULL, null=True, default=None)
+    title = models.CharField(max_length=500)
+    description = models.TextField()
+    created = models.DateTimeField()
+    completed = models.DateTimeField(null=True, default=None)
+    assined_to = models.ForeignKey(EveCharacter, on_delete=models.SET_NULL, null=True, default=None,related_name='assined_to')
+
+    @property
+    def last_comments(self):
+        try:
+            return AllianceToolJobComment.objects.filter(job=self).order_by('-created')[:5]
+        except:
+            return False
+
+
+class AllianceToolJobComment(models.Model):
+    job = models.ForeignKey(AllianceToolJob, on_delete=models.CASCADE)
+    commenter = models.ForeignKey(EveCharacter, on_delete=models.SET_NULL, null=True, default=None, related_name='commenter')
+    comment = models.TextField()
+    created = models.DateTimeField()

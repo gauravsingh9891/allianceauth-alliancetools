@@ -1,4 +1,5 @@
 import logging
+import datetime
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
@@ -6,8 +7,10 @@ from django.contrib import messages
 from esi.decorators import token_required
 from allianceauth.eveonline.models import EveCharacter
 from django.db import IntegrityError
+from django.utils import timezone
 
-from .models import AllianceToolCharacter, Structure, CorpAsset
+from .models import AllianceToolCharacter, Structure, CorpAsset, AllianceToolJob, AllianceToolJobComment
+from .forms import AddJob, AddComment
 
 CORP_REQUIRED_SCOPES = ['esi-characters.read_notifications.v1',
                         'esi-assets.read_corporation_assets.v1',
@@ -35,6 +38,25 @@ def dashboard(request):
         logging.exception("message")
 
     return render(request, 'alliancetools/dashboard.html')
+
+
+@login_required
+@permission_required('alliancetools.add_alliancetooljobcomment')
+def jobs_board(request):
+    main_char = request.user.profile.main_character
+
+    try:
+        jobs_open = AllianceToolJob.objects.filter(completed__isnull=True)
+
+        context = {
+            'jobs': jobs_open
+        }
+        return render(request, 'alliancetools/jobs.html', context=context)
+
+    except:
+        logging.exception("message")
+
+    return render(request, 'alliancetools/jobs.html')
 
 
 @login_required
@@ -137,3 +159,47 @@ def structure(request, structure_id=None):
 
     return render(request, 'alliancetools/structures.html')
 
+
+@login_required
+def add_job(request):
+    if request.method == 'POST':
+        form = AddJob(request.POST)
+
+        # check whether it's valid:
+        if form.is_valid():
+            AllianceToolJob.objects.create(creator=request.user.profile.main_character,
+                                            title=form.cleaned_data['title'],
+                                            description=form.cleaned_data['description'],
+                                            created=datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
+            messages.info(request, "Job Added")
+            return redirect('alliancetools:jobs_board')
+    else:
+        form = AddJob()
+        return render(request, 'alliancetools/add_job.html', {'form': form})
+
+
+@login_required
+def add_comment(request, job_id=None):
+    if request.method == 'POST':
+        form = AddComment(request.POST)
+
+        # check whether it's valid:
+        if form.is_valid():
+            AllianceToolJobComment.objects.create(commenter=request.user.profile.main_character,
+                                           job=AllianceToolJob.objects.get(id=request.POST.get('job_id')),
+                                           comment=form.cleaned_data['comment'],
+                                           created=datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
+            messages.info(request, "Comment Added")
+            return redirect('alliancetools:jobs_board')
+    else:
+        form = AddComment()
+        task = AllianceToolJob.objects.get(pk=job_id)
+        return render(request, 'alliancetools/add_comment.html', {'form': form, 'job': task})
+
+
+@login_required
+def mark_complete(request, job_id=None):
+    AllianceToolJob.objects.filter(id=job_id).update(
+        completed=datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
+    messages.info(request, "Job Closed")
+    return redirect('alliancetools:jobs_board')

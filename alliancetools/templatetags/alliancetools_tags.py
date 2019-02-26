@@ -62,3 +62,8 @@ def item_image(type_id):
         return "<img class=\"img-rounded\" src=\"https://imageserver.eveonline.com/Type/%s_32.png\" style=\"height: 32px; width: 32px;\" title=\"%s\">" % (int(type_id), name)
     except:
         return ""
+
+
+@register.filter(name='addclass')
+def addclass(value, arg):
+    return value.as_widget(attrs={'class': arg})

@@ -1,0 +1,14 @@
+{% extends 'alliancetools/base.html' %}
+{% load alliancetools_tags %}
+{% block at_block %}
+<h4>Adding Comment to {{job.title}}</h4>
+<form action="/alliancetools/add_comment/{{job.id}}/" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="job_id" value="{{job.id}}" />
+    <p>
+        {{ form.comment.label_tag }}
+        {{ form.comment|addclass:'form-control' }}
+    </p>
+    <input type="submit" value="Submit" class="btn btn-primary">
+</form>
+{% endblock %}

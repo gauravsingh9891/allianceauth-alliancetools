@@ -10,4 +10,8 @@ urlpatterns = [
     url(r'^structures/$', views.structures, name='structures'),
     url(r'^structure/(?P<structure_id>(\d)*)/$', views.structure, name='structure'),
     url(r'^addchar/$', views.alliancetools_add_char, name='add_char'),
+    url(r'^jobs/$', views.jobs_board, name='jobs_board'),
+    url(r'^add_job/$', views.add_job, name='add_job'),
+    url(r'^add_comment/(?P<job_id>(\d)*)/$', views.add_comment, name='add_comment'),
+    url(r'^mark_complete/(?P<job_id>(\d)*)/$', views.mark_complete, name='mark_complete'),
 ]
