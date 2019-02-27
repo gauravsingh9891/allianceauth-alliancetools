@@ -81,6 +81,8 @@ class AllianceToolCharacter(models.Model):
         permissions = (('access_alliance_tools', 'Can access alliance_tools'),
                        ('access_alliance_tools_structures', 'Can access structures'),
                        ('access_alliance_tools_structure_fittings', 'Can access structure fittings'),
+                       ('access_alliance_tools_structures_renter', 'Can access renter structures'),
+                       ('access_alliance_tools_structure_fittings_renter', 'Can access renter structure fittings'),
                        ('admin_alliance_tools', 'Can add tokens to alliance tools'))
 
 
