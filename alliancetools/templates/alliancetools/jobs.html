@@ -38,7 +38,7 @@
                                             <h4>{{ job.title }}</h4>
                                             <p><b>Creator:</b> {{ job.creator.character_name }}</p>
                                             <p><b>Created:</b> {{ job.created|naturaltime }}</p>
-                                            <p>{% if job.description %}{{ job.description }}{% else %}{{ job.title }}{% endif %}</p>
+                                            <p style="white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;">{% if job.description %}{{ job.description|safe }}{% else %}{{ job.title }}{% endif %}</p>
                                         </td>
                                     </tr>
                                 </table>
@@ -58,7 +58,7 @@
                                                     <div class="col-sm-12 col-sm-8 col-md-8">
                                                         <p><b>{{comment.commenter.character_name}}</b> ({{ comment.created|naturaltime }})
                                                         </p>
-                                                        <p>{{ comment.comment }}</p>
+                                                        <p style="white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;">{{ comment.comment }}</p>
                                                     </div>
                                                 </div>
                                                 {% if comments.count > 1 %}
@@ -76,7 +76,7 @@
                                                     <div class="col-sm-12 col-sm-8 col-md-8">
                                                         <p><b>{{comment.commenter.character_name}}</b> ({{ comment.created|naturaltime
                                                             }})</p>
-                                                        <p>{{ comment.comment }}</p>
+                                                        <p style="white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;">{{ comment.comment }}</p>
                                                     </div>
                                                 </div>
                                             {% endif %}
@@ -127,7 +127,7 @@
                                         <h4>{{ job.title }}</h4>
                                         <p><b>Closed By:</b> {{ job.assined_to.character_name }}</p>
                                         <p><b>Completed:</b> {{ job.completed|naturaltime }}</p>
-                                        <p>{% if job.description %}{{ job.description }}{% else %}{{ job.title }}{% endif %}</p>
+                                        <p style="white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;">{% if job.description %}{{ job.description }}{% else %}{{ job.title }}{% endif %}</p>
                                     </td>
                                 </tr>
                             </table>
