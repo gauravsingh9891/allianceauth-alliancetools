@@ -241,7 +241,7 @@ class AllianceToolJob(models.Model):
     @property
     def last_comments(self):
         try:
-            return AllianceToolJobComment.objects.filter(job=self).order_by('-created')[:5]
+            return AllianceToolJobComment.objects.filter(job=self).order_by('-created')
         except:
             return False
 

@@ -43,13 +43,13 @@ def dashboard(request):
 @login_required
 @permission_required('alliancetools.add_alliancetooljobcomment')
 def jobs_board(request):
-    main_char = request.user.profile.main_character
-
     try:
         jobs_open = AllianceToolJob.objects.filter(completed__isnull=True)
+        jobs_closed = AllianceToolJob.objects.filter(completed__isnull=False).order_by('-completed')[:10]
 
         context = {
-            'jobs': jobs_open
+            'jobs': jobs_open,
+            'closed': jobs_closed,
         }
         return render(request, 'alliancetools/jobs.html', context=context)
 
@@ -200,6 +200,7 @@ def add_comment(request, job_id=None):
 @login_required
 def mark_complete(request, job_id=None):
     AllianceToolJob.objects.filter(id=job_id).update(
-        completed=datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
+        completed=datetime.datetime.utcnow().replace(tzinfo=timezone.utc),
+        assined_to=request.user.profile.main_character)
     messages.info(request, "Job Closed")
     return redirect('alliancetools:jobs_board')
