@@ -1,18 +1,21 @@
 import logging
 import datetime
+import json
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
 from django.contrib import messages
 from esi.decorators import token_required
 from allianceauth.eveonline.models import EveCharacter
+from allianceauth.authentication.models import UserProfile
 from django.db import IntegrityError
 from django.utils import timezone
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 
 from .models import AllianceToolCharacter, Structure, CorpAsset, AllianceToolJob, AllianceToolJobComment
-from .forms import AddJob, AddComment
+from .forms import AddJob, AddComment, EditJob
+from easyaudit.models import CRUDEvent
 
 CORP_REQUIRED_SCOPES = ['esi-characters.read_notifications.v1',
                         'esi-assets.read_corporation_assets.v1',
@@ -195,9 +198,44 @@ def add_comment(request, job_id=None):
 
 
 @login_required
+def edit_job(request, job_id=None):
+    if request.method == 'POST':
+        form = EditJob(request.POST)
+
+        # check whether it's valid:
+        if form.is_valid():
+            jb = AllianceToolJob.objects.get(id=request.POST.get('job_id'))
+            jb.title = form.cleaned_data['title']
+            jb.description = form.cleaned_data['description']
+            jb.save()
+            messages.info(request, "Edit Successful")
+            return redirect('alliancetools:jobs_board')
+    else:
+        task = AllianceToolJob.objects.get(pk=job_id)
+        form = EditJob(initial={'title': task.title,
+                                'description': task.description})
+        return render(request, 'alliancetools/edit_job.html', {'form': form, 'job': task})
+
+
+@login_required
 def mark_complete(request, job_id=None):
     AllianceToolJob.objects.filter(id=job_id).update(
         completed=datetime.datetime.utcnow().replace(tzinfo=timezone.utc),
         assined_to=request.user.profile.main_character)
     messages.info(request, "Job Closed")
     return redirect('alliancetools:jobs_board')
+
+
+@login_required
+def audit_log(request, job_id=None):
+    crud_list = CRUDEvent.objects.filter(object_id=job_id)
+    cruds = []
+    for event in crud_list:
+        json_array = json.loads(event.object_json_repr)
+
+        cruds.append({'user': UserProfile.objects.get(user=event.user).main_character,
+                     'datetime': event.datetime,
+                     'title': json_array[0]['fields']['title'],
+                     'description': json_array[0]['fields']['description']})
+    return render(request, 'alliancetools/audit_log.html', {'cruds': cruds})
+

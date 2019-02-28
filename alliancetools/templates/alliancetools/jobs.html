@@ -42,10 +42,16 @@
                                         </td>
                                     </tr>
                                 </table>
-                                <a class="btn btn-success col-xs-6 col-sm-5 col-md-5" type="button"
-                                   href="{% url 'alliancetools:mark_complete' job.id %}" title="Mark Complete">Mark Complete</a>
-                                <a class="btn btn-primary col-xs-6 col-sm-5 col-md-5 col-md-offset-2 col-sm-offset-2"
-                                   type="button" href="{% url 'alliancetools:add_comment' job.id %}" title="Add Comment">Add Comment</a>
+                                <div class="pull-right">
+                                    <a class="btn btn-info fa fa-file-text"
+                                       type="button" href="{% url 'alliancetools:audit_log' job.id %}" title="Audit"></a>
+                                    <a class="btn btn-success fa fa-check-square" type="button"
+                                       href="{% url 'alliancetools:mark_complete' job.id %}" title="Mark Complete"></a>
+                                    <a class="btn btn-primary fa fa-edit"
+                                       type="button" href="{% url 'alliancetools:edit_job' job.id %}" title="Edit"></a>
+                                    <a class="btn btn-primary fa fa-comment"
+                                       type="button" href="{% url 'alliancetools:add_comment' job.id %}" title="Add Comment"></a>
+                                </div>
                                 {% with comments=job.last_comments %}
                                     {% if comments %}
                                         {% for comment in comments %}
@@ -56,7 +62,7 @@
                                                              src="https://image.eveonline.com/Character/{{ comment.commenter.character_id }}_64.jpg">
                                                     </div>
                                                     <div class="col-sm-12 col-sm-8 col-md-8">
-                                                        <p><b>{{comment.commenter.character_name}}</b>  ({{ comment.created|naturaltime }})
+                                                        <p><b>{{comment.commenter.character_name}}</b> ({{ comment.created|naturaltime }})
                                                         </p>
                                                         <p style="white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;">{{ comment.comment }}</p>
                                                     </div>
@@ -74,7 +80,8 @@
                                                              src="https://image.eveonline.com/Character/{{ comment.commenter.character_id }}_64.jpg">
                                                     </div>
                                                     <div class="col-sm-12 col-sm-8 col-md-8">
-                                                        <p><b>{{comment.commenter.character_name}}</b> ({{ comment.created|naturaltime }})</p>
+                                                        <p><b>{{comment.commenter.character_name}}</b> ({{ comment.created|naturaltime
+                                                            }})</p>
                                                         <p style="white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;">{{ comment.comment }}</p>
                                                     </div>
                                                 </div>
@@ -156,7 +163,8 @@
                                              src="https://image.eveonline.com/Character/{{ comment.commenter.character_id }}_64.jpg">
                                     </div>
                                     <div class="col-sm-12 col-sm-8 col-md-8">
-                                        <p><b>{{comment.commenter.character_name}}</b> ({{ comment.created|naturaltime }})</p>
+                                        <p><b>{{comment.commenter.character_name}}</b> ({{ comment.created|naturaltime
+                                            }})</p>
                                         <p>{{ comment.comment }}</p>
                                     </div>
                                 </div>

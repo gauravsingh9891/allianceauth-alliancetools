@@ -13,5 +13,7 @@ urlpatterns = [
     url(r'^jobs/$', views.jobs_board, name='jobs_board'),
     url(r'^add_job/$', views.add_job, name='add_job'),
     url(r'^add_comment/(?P<job_id>(\d)*)/$', views.add_comment, name='add_comment'),
+    url(r'^edit_job/(?P<job_id>(\d)*)/$', views.edit_job, name='edit_job'),
+    url(r'^audit_log/(?P<job_id>(\d)*)/$', views.audit_log, name='audit_log'),
     url(r'^mark_complete/(?P<job_id>(\d)*)/$', views.mark_complete, name='mark_complete'),
 ]

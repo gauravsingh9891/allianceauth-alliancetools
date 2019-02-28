@@ -1,0 +1,17 @@
+{% extends 'alliancetools/base.html' %}
+{% load alliancetools_tags %}
+{% block at_block %}
+<form action="/alliancetools/edit_job/{{job.id}}/" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="job_id" value="{{job.id}}" />
+    <p>
+        {{ form.title.label_tag }}
+        {{ form.title|addclass:'form-control' }}
+    </p>
+    <p>
+        {{ form.description.label_tag }}
+        {{ form.description|addclass:'form-control' }}
+    </p>
+    <input type="submit" value="Submit" class="btn btn-primary">
+</form>
+{% endblock %}
