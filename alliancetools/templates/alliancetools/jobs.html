@@ -19,30 +19,23 @@
     <div class="tab-pane fade in active" id="open-jobs">
         {% if jobs %}
         <div class="container col-xs-12">
-            <div class="row">
-                <div class="col-xs-12 col-md-12 text-center">
-                    <h3> </h3>
-                </div>
-            </div>
-            <div class="row">
-                <div class="flex-container flex-wrap">
+            <table class="table table-striped">
+                    <thead>
+                        <th class="text-center">Creator</th>
+                        <th class="text-center">Date</th>
+                        <th></th>
+                        <th></th>
+                    </thead>
                     {% for job in jobs %}
-                        <div class=" col-xs-12 col-sm-6 col-md-4">
-                            <div class="flex-item  col-xs-12 col-sm-12 col-md-12">
-                                <table class="col-xs-12 col-sm-12 col-md-12">
-                                    <tr>
-                                        <td><img style="margin:10px;" class="ra-avatar img-circle"
-                                                 src="https://image.eveonline.com/Character/{{ job.creator.character_id }}_64.jpg">
-                                        </td>
-                                        <td>
-                                            <h4>{{ job.title }}</h4>
-                                            <p><b>Creator:</b> {{ job.creator.character_name }}</p>
-                                            <p><b>Created:</b> {{ job.created|naturaltime }}</p>
-                                            <p style="white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;">{% if job.description %}{{ job.description|safe }}{% else %}{{ job.title }}{% endif %}</p>
-                                        </td>
-                                    </tr>
-                                </table>
-                                <div class="pull-right">
+                        <tr>
+                            <td class="text-center" style="vertical-align:middle;"><img style="margin:10px;" class="ra-avatar img-circle"
+                                     src="https://image.eveonline.com/Character/{{ job.creator.character_id }}_64.jpg">
+                                <p>{{ job.creator.character_name }}</p>
+                            </td>
+                            <td class="text-center"  style="vertical-align:middle;" ><p>{{ job.created|date:"Y-m-d H:i"}}</p><p>{{ job.created|naturaltime }}</p></td>
+                            <td class="text-center" style="vertical-align:middle;">
+                                <h4>{{ job.title }}</h4>
+                                <div class="text-center">
                                     <a class="btn btn-info fa fa-file-text"
                                        type="button" href="{% url 'alliancetools:audit_log' job.id %}" title="Audit"></a>
                                     <a class="btn btn-success fa fa-check-square" type="button"
@@ -52,58 +45,50 @@
                                     <a class="btn btn-primary fa fa-comment"
                                        type="button" href="{% url 'alliancetools:add_comment' job.id %}" title="Add Comment"></a>
                                 </div>
+                            </td>
+
+                            <td>
+                                <p style="white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;">{% if job.description %}{{ job.description|safe }}{% else %}{{ job.title }}{% endif %}</p>
+
+
                                 {% with comments=job.last_comments %}
                                     {% if comments %}
                                         {% for comment in comments %}
                                             {% if forloop.first %}
-                                                <div class="flex-item col-xs-12 col-md-12" style="border-width: 1px 0 0 0;">
-                                                    <div class="text-center col-sm-12 col-sm-4 col-md-4">
-                                                        <img class="ra-avatar img-circle"
-                                                             src="https://image.eveonline.com/Character/{{ comment.commenter.character_id }}_64.jpg">
-                                                    </div>
-                                                    <div class="col-sm-12 col-sm-8 col-md-8">
-                                                        <p><b>{{comment.commenter.character_name}}</b> ({{ comment.created|naturaltime }})
-                                                        </p>
-                                                        <p style="white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;">{{ comment.comment }}</p>
-                                                    </div>
-                                                </div>
-                                                {% if comments.count > 1 %}
+                                                {% if comments.count > 0 %}
                                                     <div class="btn btn-primary col-xs-12 col-sm-12 col-md-12" data-toggle="collapse"
                                                          href="#{{ job.id }}">Show/Hide Comments ({{ comments.count }})
                                                     </div>
                                                     <div id="{{job.id}}" class="collapse">
+                                                    <table class="table table-hover" style="border-width: 1px 0 0 0;">
+
                                                 {% endif %}
                                             {% else %}
-                                                <div class="flex-item col-xs-12 col-md-12" style="border-width: 1px 0 0 0;">
-                                                    <div class="text-center col-sm-12 col-sm-4 col-md-4">
+                                            {% endif %}
+                                                    <tr><td class="text-center">
                                                         <img class="ra-avatar img-circle"
                                                              src="https://image.eveonline.com/Character/{{ comment.commenter.character_id }}_64.jpg">
-                                                    </div>
-                                                    <div class="col-sm-12 col-sm-8 col-md-8">
-                                                        <p><b>{{comment.commenter.character_name}}</b> ({{ comment.created|naturaltime
-                                                            }})</p>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <p><b>{{comment.commenter.character_name}}</b> ({{ comment.created|naturaltime }})</p>
                                                         <p style="white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;">{{ comment.comment }}</p>
-                                                    </div>
-                                                </div>
-                                            {% endif %}
+                                                    </td></tr>
 
                                             {% if forloop.last %}
-                                                {% if comments.count > 1 %}
+                                                {% if comments.count > 0 %}
+                                                        </table>
                                                      </div>
                                                 {% endif %}
                                             {% endif %}
                                         {% empty %}
-                                        <!-- <div class="btn btn-primary text-center col-md-12">{% trans "No Comments" %}</div>-->
                                         {% endfor %}
                                     {% else %}
-                                    <!--  <div class="btn btn-primary text-center col-md-12">{% trans "No Comments" %}</div>-->
                                     {% endif %}
                                 {% endwith %}
-                            </div>
-                        </div>
+                            </td>
+                        </tr>
                     {% endfor %}
-                </div>
-            </div>
+            </table>
         </div>
         {% else %}
         <div class="alert alert-warning text-center">{% trans "No Open Jobs" %}</div>
@@ -114,77 +99,70 @@
     <div class="tab-pane fade" id="closed-jobs">
         {% if closed %}
         <div class="container col-xs-12">
-            <div class="row">
-                <div class="col-xs-12 col-md-12 text-center">
-                    <h3> </h3>
-                </div>
-            </div>
-            <div class="row">
-                <div class="flex-container flex-wrap">
-                    {% for job in closed%}
-                    <div class=" col-xs-12 col-sm-6 col-md-4">
-                        <div class="flex-item  col-xs-12 col-sm-12 col-md-12">
-                            <table class="col-xs-12 col-sm-12 col-md-12">
-                                <tr>
-                                    <td><img style="margin:10px;" class="ra-avatar img-circle"
-                                             src="https://image.eveonline.com/Character/{{ job.creator.character_id }}_64.jpg">
-                                    </td>
-                                    <td>
-                                        <h4>{{ job.title }}</h4>
-                                        <p><b>Closed By:</b> {{ job.assined_to.character_name }}</p>
-                                        <p><b>Completed:</b> {{ job.completed|naturaltime }}</p>
-                                        <p style="white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;">{% if job.description %}{{ job.description }}{% else %}{{ job.title }}{% endif %}</p>
-                                    </td>
-                                </tr>
-                            </table>
-                            {% with comments=job.last_comments %}
-                            {% if comments %}
-                            {% for comment in comments %}
-                            {% if forloop.first %}
-                            <div class="flex-item col-xs-12 col-md-12" style="border-width: 1px 0 0 0;">
-                                <div class="text-center col-sm-12 col-sm-4 col-md-4">
-                                    <img class="ra-avatar img-circle"
-                                         src="https://image.eveonline.com/Character/{{ comment.commenter.character_id }}_64.jpg">
+            <table class="table table-striped">
+                    <thead>
+                        <th class="text-center">Completed By</th>
+                        <th class="text-center">Date</th>
+                        <th></th>
+                        <th></th>
+                    </thead>
+                    {% for job in closed %}
+                        <tr>
+                            <td class="text-center" style="vertical-align:middle;"><img style="margin:10px;" class="ra-avatar img-circle"
+                                     src="https://image.eveonline.com/Character/{{ job.assined_to.character_id }}_64.jpg">
+                                <p>{{ job.assined_to.character_name }}</p>
+                            </td>
+                            <td class="text-center"  style="vertical-align:middle;" ><p>{{ job.completed|date:"Y-m-d H:i"}}</p><p>{{ job.completed|naturaltime }}</p></td>
+                            <td class="text-center" style="vertical-align:middle;">
+                                <h4>{{ job.title }}</h4>
+                                <div class="text-center">
+                                    <a class="btn btn-info fa fa-file-text"
+                                       type="button" href="{% url 'alliancetools:audit_log' job.id %}" title="Audit"></a>
                                 </div>
-                                <div class="col-sm-12 col-sm-8 col-md-8">
-                                    <p><b>{{comment.commenter.character_name}}</b> {{ comment.created|naturaltime }}</p>
-                                    <p>{{ comment.comment }}</p>
-                                </div>
-                            </div>
-                            {% if comments.count > 1 %}
-                            <div class="btn btn-primary col-xs-12 col-sm-12 col-md-12" data-toggle="collapse"
-                                 href="#{{ job.id }}">Show/Hide Comments ({{ comments.count }})
-                            </div>
-                            <div id="{{job.id}}" class="collapse">{% endif %}
-                                {% else %}
-                                <div class="flex-item col-xs-12 col-md-12" style="border-width: 1px 0 0 0;">
-                                    <div class="text-center col-sm-12 col-sm-4 col-md-4">
-                                        <img class="ra-avatar img-circle"
-                                             src="https://image.eveonline.com/Character/{{ comment.commenter.character_id }}_64.jpg">
-                                    </div>
-                                    <div class="col-sm-12 col-sm-8 col-md-8">
-                                        <p><b>{{comment.commenter.character_name}}</b> ({{ comment.created|naturaltime
-                                            }})</p>
-                                        <p>{{ comment.comment }}</p>
-                                    </div>
-                                </div>
-                                {% endif %}
-                                {% if forloop.last %}{% if comments.count > 1 %}
-                            </div>
-                            {% endif %}
-                            {% endif %}
-                            {% empty %}
-                            <!-- <div class="btn btn-primary text-center col-md-12">{% trans "No Comments" %}</div>-->
-                            {% endfor %}
-                            {% else %}
-                            <!--  <div class="btn btn-primary text-center col-md-12">{% trans "No Comments" %}</div>-->
-                            {% endif %}
-                            {% endwith %}
-                        </div>
-                    </div>
+                            </td>
+
+                            <td>
+                                <p style="white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;">{% if job.description %}{{ job.description|safe }}{% else %}{{ job.title }}{% endif %}</p>
+
+
+                                {% with comments=job.last_comments %}
+                                    {% if comments %}
+                                        {% for comment in comments %}
+                                            {% if forloop.first %}
+                                                {% if comments.count > 0 %}
+                                                    <div class="btn btn-primary col-xs-12 col-sm-12 col-md-12" data-toggle="collapse"
+                                                         href="#{{ job.id }}">Show/Hide Comments ({{ comments.count }})
+                                                    </div>
+                                                    <div id="{{job.id}}" class="collapse">
+                                                    <table class="table table-hover" style="border-width: 1px 0 0 0;">
+
+                                                {% endif %}
+                                            {% else %}
+                                            {% endif %}
+                                                    <tr><td class="text-center">
+                                                        <img class="ra-avatar img-circle"
+                                                             src="https://image.eveonline.com/Character/{{ comment.commenter.character_id }}_64.jpg">
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <p><b>{{comment.commenter.character_name}}</b> ({{ comment.created|naturaltime }})</p>
+                                                        <p style="white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;">{{ comment.comment }}</p>
+                                                    </td></tr>
+
+                                            {% if forloop.last %}
+                                                {% if comments.count > 0 %}
+                                                        </table>
+                                                     </div>
+                                                {% endif %}
+                                            {% endif %}
+                                        {% empty %}
+                                        {% endfor %}
+                                    {% else %}
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                        </tr>
                     {% endfor %}
-                </div>
-            </div>
+            </table>
         </div>
         {% else %}
         <div class="alert alert-warning text-center">{% trans "No Closed Jobs" %}</div>

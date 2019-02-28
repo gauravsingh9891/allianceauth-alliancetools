@@ -2,7 +2,6 @@
 {% load alliancetools_tags %}
 {% load humanize %}
 {% block at_block %}
-{% if cruds %}
     <h4 class="text-center">Autdit Log</h4>
     <table class="table table-striped">
         <thead>
@@ -16,8 +15,9 @@
         <tbody>
             {% for crud in cruds %}
                 <tr><td>{{crud.user}}</td><td>{{crud.datetime|naturaltime}}</td><td>{{crud.title}}</td><td style="white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;">{{crud.description}}</td></tr>
+            {% empty %}
+                <div class="alert alert-info">No Audit Events Recorded</div>
             {% endfor %}
         </tbody>
     </table>
-{% endif %}
 {% endblock %}
