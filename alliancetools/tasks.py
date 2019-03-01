@@ -713,7 +713,7 @@ def send_discord_pings():
                               {'name': 'Time Till Out', 'value': tile_till, 'inline': False},
                               {'name': 'Date Out', 'value': ref_date_time.strftime("%Y-%m-%d %H:%M"), 'inline': False}]
 
-                    ping = process_ping(structure.structure_id,
+                    ping = process_ping(notification.notification_id,
                                         structure_name,
                                         body,
                                         fields,
@@ -749,7 +749,7 @@ def send_discord_pings():
                               {'name': 'Type', 'value': structure_type, 'inline': True},
                               {'name': 'Attacker', 'value': attackerStr, 'inline': True}]
 
-                    ping = process_ping(notification_data['structureID'],
+                    ping = process_ping(notification.notification_id,
                                         structure_name,
                                         body,
                                         fields,
