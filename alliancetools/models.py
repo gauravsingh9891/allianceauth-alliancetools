@@ -253,3 +253,26 @@ class AllianceToolJobComment(models.Model):
     commenter = models.ForeignKey(EveCharacter, on_delete=models.SET_NULL, null=True, default=None, related_name='commenter')
     comment = models.TextField()
     created = models.DateTimeField()
+
+
+# Alert Models ********************************************************************************************************
+class NotificationAlert(models.Model):
+    discord_webhook = models.TextField()
+    corporation = models.ForeignKey(EveCorporationInfo,
+                                    on_delete=models.SET_NULL,
+                                    null=True,
+                                    default=None)
+    structure_ping = models.BooleanField(default=True)
+    entosis_ping = models.BooleanField(default=True)
+    fuel_ping = models.BooleanField(default=False)  # not configured as yet
+
+
+class NotificationPing(models.Model):
+    title = models.TextField()
+    body = models.TextField()
+    time = models.DateTimeField()
+    catagory = models.TextField()
+    notification_id = models.BigIntegerField()
+
+    def __str__(self):
+        return "%s for %s at %s" % (self.__class__.__name__, self.title, str(self.time.strftime("%Y %m %d %H:%M:%S")))
