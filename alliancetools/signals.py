@@ -7,5 +7,5 @@ from .models import Notification
 
 @receiver(post_bulk_create, sender=Notification)
 def callback(signal, sender, args, **kwargs):
-    if (args['self'].count > 0):
+    if (args['self'].count() > 0):
         send_discord_pings.delay()
