@@ -4,6 +4,7 @@ from django.dispatch import receiver
 from django_query_signals.signals import post_bulk_create
 
 from .models import Notification
+from .tasks import send_discord_pings
 
 @receiver(post_bulk_create, sender=Notification)
 def callback(signal, sender, args, **kwargs):
