@@ -19,6 +19,7 @@ import requests
 import datetime
 import json
 import yaml
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -771,10 +772,11 @@ def send_discord_pings():
             alertText = ""
             if data['alert_ping']:
                 alertText = "@everyone"  # or @here
-
-            r = requests.post(hook, headers=custom_headers,
-                              data=json.dumps({'content': alertText, 'embeds': data['embeds']}))
-            r.raise_for_status()
-
+            chunks = [data['embeds'][i:i + 5] for i in range(0, len(data['embeds']), 5)]
+            for chunk in chunks:
+                r = requests.post(hook, headers=custom_headers,
+                                  data=json.dumps({'content': alertText, 'embeds': chunk}))
+                r.raise_for_status()
+                time.sleep(1)
 
 
