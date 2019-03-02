@@ -261,7 +261,8 @@ class NotificationAlert(models.Model):
     corporation = models.ForeignKey(EveCorporationInfo,
                                     on_delete=models.SET_NULL,
                                     null=True,
-                                    default=None)
+                                    default=None,
+                                    blank=True)
     structure_ping = models.BooleanField(default=True)
     entosis_ping = models.BooleanField(default=True)
     fuel_ping = models.BooleanField(default=False)  # not configured as yet

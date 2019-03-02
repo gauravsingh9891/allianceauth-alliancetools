@@ -809,7 +809,7 @@ def send_discord_pings():
                     notification_data = yaml.load(notification.notification_text)
                     system_name = MapSolarSystem.objects.get(
                         solarSystemID=notification_data['solarSystemID']).solarSystemName
-                    structure_name = TypeName.objects.get(type_id=notification_data['structureTypeID'])
+                    structure_name = TypeName.objects.get(type_id=notification_data['structureTypeID']).name
                     body = "Entosis has started in %s on %s" % (system_name, structure_name)
                     timestamp = notification.timestamp
                     fields = [{'name': 'System', 'value': system_name, 'inline': True}]
