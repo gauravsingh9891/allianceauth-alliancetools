@@ -636,9 +636,10 @@ def run_ozone_levels(self, character_id):
 
 @shared_task()
 def send_discord_pings():
+
     def filetime_to_dt(ft):
         us = (ft - 116444736000000000) // 10
-        return datetime(1970, 1, 1) + datetime.timedelta(microseconds=us)
+        return datetime.datetime(1970, 1, 1) + datetime.timedelta(microseconds=us)
 
     def convert_timedelta(duration):
         days, seconds = duration.days, duration.seconds
@@ -689,7 +690,6 @@ def send_discord_pings():
         if notification.notification_id not in already_pinged:
             if notification.notification_type in structure_pings:
                 attack_hooks = discord_hooks.filter(structure_ping=True)
-
                 if notification.notification_type == 'StructureLostArmor':
                     body = "Structure has lost its Armor"
                     notification_data = yaml.load(notification.notification_text)
@@ -763,6 +763,70 @@ def send_discord_pings():
                                         footer)
                     if ping:
                         for hook in attack_hooks:
+                            embed_lists[hook.discord_webhook]['alert_ping'] = True
+                            embed_lists[hook.discord_webhook]['embeds'].append(ping)
+
+            elif notification.notification_type in entosis_ping:
+                enotosis_hooks = discord_hooks.filter(structure_ping=True)
+
+                if notification.notification_type == "SovStructureReinforced":
+                    title = "Entosis notification"
+                    notification_data = yaml.load(notification.notification_text)
+                    system_name = MapSolarSystem.objects.get(
+                        solarSystemID=notification_data['solarSystemID']).solarSystemName
+                    body = "Sov Struct Reinforced in %s" % system_name
+                    if notification_data['campaignEventType'] == 1:
+                        body = "TCU Reinforced in %s" % system_name
+                    elif notification_data['campaignEventType'] == 2:
+                        body = "IHub Reinforced in %s" % system_name
+                    ref_time_delta = filetime_to_dt(notification_data['decloakTime'])
+
+                    # print (refTimeDelta.seconds, flush=True)
+                    timestamp = notification.timestamp
+                    tile_till = format_timedelta(
+                        ref_time_delta.replace(tzinfo=timezone.utc) - datetime.datetime.now(timezone.utc))
+
+                    fields = [{'name': 'System', 'value': system_name, 'inline': True},
+                              {'name': 'Time Till Decloaks', 'value': tile_till, 'inline': False},
+                              {'name': 'Date Out', 'value': ref_time_delta.strftime("%Y-%m-%d %H:%M"), 'inline': False}]
+                    ping = process_ping(notification.notification_id,
+                                        title,
+                                        body,
+                                        fields,
+                                        timestamp,
+                                        "entosis",
+                                        11075584,
+                                        False,
+                                        ("http://evemaps.dotlan.net/system/%s" % system_name.replace(' ', '_')),
+                                        False)
+
+                    if ping:
+                        for hook in enotosis_hooks:
+                            embed_lists[hook.discord_webhook]['embeds'].append(ping)
+
+                elif notification.notification_type == "EntosisCaptureStarted":
+                    title = "Entosis notification"
+                    notification_data = yaml.load(notification.notification_text)
+                    system_name = MapSolarSystem.objects.get(
+                        solarSystemID=notification_data['solarSystemID']).solarSystemName
+                    structure_name = TypeName.objects.get(type_id=notification_data['structureTypeID'])
+                    body = "Entosis has started in %s on %s" % (system_name, structure_name)
+                    timestamp = notification.timestamp
+                    fields = [{'name': 'System', 'value': system_name, 'inline': True}]
+
+                    ping = process_ping(notification.notification_id,
+                                        title,
+                                        body,
+                                        fields,
+                                        timestamp,
+                                        "entosis",
+                                        11075584,
+                                        False,
+                                        ("http://evemaps.dotlan.net/system/%s" % system_name.replace(' ', '_')),
+                                        False)
+
+                    if ping:
+                        for hook in enotosis_hooks:
                             embed_lists[hook.discord_webhook]['alert_ping'] = True
                             embed_lists[hook.discord_webhook]['embeds'].append(ping)
 
