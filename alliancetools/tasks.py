@@ -702,7 +702,7 @@ def send_discord_pings():
                     # print (refTimeDelta.seconds, flush=True)
                     tile_till = format_timedelta(_refTimeDelta)
                     timestamp = notification.timestamp
-                    ref_date_time = timestamp + refTimeDelta
+                    ref_date_time = timestamp + _refTimeDelta
                     corp_name = notification.character.character.corporation_name
                     corp_ticker = notification.character.character.corporation_ticker
                     corp_id = notification.character.character.corporation_id
