@@ -34,7 +34,7 @@
                             </td>
                             <td class="text-center"  style="vertical-align:middle;" ><p>{{ job.created|date:"Y-m-d H:i"}}</p><p>{{ job.created|naturaltime }}</p></td>
                             <td class="text-center" style="vertical-align:middle;">
-                                <h3>{{ job.title }}</h3>
+                                <h4>{{ job.title }}</h4>
                                 <div class="text-center">
                                     <a class="btn btn-info fa fa-file-text"
                                        type="button" href="{% url 'alliancetools:audit_log' job.id %}" title="Audit"></a>
