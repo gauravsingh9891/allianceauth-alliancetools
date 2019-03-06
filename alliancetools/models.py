@@ -270,6 +270,9 @@ class NotificationAlert(models.Model):
     entosis_ping = models.BooleanField(default=True)
     fuel_ping = models.BooleanField(default=False)  # not configured as yet
 
+    def __str__(self):
+        return "Notification Hook for: %s" % (self.corporation.corporation_name if self.corporation else "All")
+
 
 class NotificationPing(models.Model):
     title = models.TextField()
@@ -293,3 +296,6 @@ class GroupReqWebhook(models.Model):
     group = models.ForeignKey(Group, on_delete=models.CASCADE)
     enabled = models.BooleanField()
     webhook = models.TextField()
+
+    def __str__(self):
+        return "Group Hook for: %s" % self.group.name
