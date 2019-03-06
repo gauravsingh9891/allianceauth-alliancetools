@@ -1,7 +1,7 @@
 from django.db import models
 from model_utils import Choices
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
-
+import json
 
 # Name Class
 class EveName(models.Model):
@@ -274,6 +274,13 @@ class NotificationPing(models.Model):
     time = models.DateTimeField()
     catagory = models.TextField()
     notification_id = models.BigIntegerField()
+
+    @property
+    def get_json(self):
+        try:
+            return json.loads(self.body)
+        except:
+            return []
 
     def __str__(self):
         return "%s for %s at %s" % (self.__class__.__name__, self.title, str(self.time.strftime("%Y %m %d %H:%M:%S")))

@@ -13,7 +13,8 @@ from django.utils import timezone
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 
-from .models import AllianceToolCharacter, Structure, CorpAsset, AllianceToolJob, AllianceToolJobComment
+from .models import AllianceToolCharacter, Structure, CorpAsset, AllianceToolJob, AllianceToolJobComment, \
+    NotificationPing
 from .forms import AddJob, AddComment, EditJob
 from easyaudit.models import CRUDEvent
 
@@ -152,11 +153,16 @@ def structure(request, structure_id=None):
             fit_ob['StructureFuel'].append(fi)
         else:
             fit_ob[fi.location_flag] = fi
+
+    notifications = NotificationPing.objects.filter(title=structure.name).order_by('-time')
+
     context = {
         'structure': structure,
         'slots': slot_layout,
-        'fittings': fit_ob
+        'fittings': fit_ob,
+        'notification_pings': notifications
     }
+
     return render(request, 'alliancetools/structure.html', context=context)
 
 

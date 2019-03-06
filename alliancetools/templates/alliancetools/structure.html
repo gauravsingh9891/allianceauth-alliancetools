@@ -253,10 +253,10 @@
           <div class="panel col-sm-12 col-md-8 col-md-offset-2">
             <div class="panel-heading">
               <h4 class="panel-title text-center">
-                <a data-toggle="collapse"href="#collapse1">Buy All List</a>
+                <a data-toggle="collapse"href="#fitting">Buy All List</a>
               </h4>
             </div>
-            <div id="collapse1"class="panel-collapse collapse ">
+            <div id="fitting"class="panel-collapse collapse ">
               <div class="panel-body text-center">
                   <p>{{structure.type_id|type_name}} </br>
                     {% if fittings.LoSlot0 %}{{fittings.LoSlot0.type_id|type_name}}</br>{% endif %}
@@ -313,6 +313,40 @@
             </div>
           </div>
         </div>
+        {% if notification_pings %}
+            <div class="row">
+              <div class="panel col-sm-12 col-md-8 col-md-offset-2">
+                <div class="panel-heading">
+                  <h4 class="panel-title text-center">
+                    <a data-toggle="collapse"href="#notifs">Structure Notification History</a>
+                  </h4>
+                </div>
+                <div id="notifs"class="panel-collapse collapse ">
+                    <table class="table table-hover">
+                        <thead>
+                            <th>Date</th>
+                            <th>Title</th>
+                            <th>Detail</th>
+                        </thead>
+                        {% for note in notification_pings %}
+                        {% with notejson=note.get_json %}
+                        <tr>
+                            <td>{{note.time|date:"Y-m-d H:i"}}</td>
+                            <td>{{notejson.description}}</td>
+                            <td>
+                        {% for notej in notejson.fields %}
+                                <p>{{ notej.name }}: {{ notej.value }}</p>
+                        {% endfor %}
+                            </td>
+                        </tr>
+                        {% endwith %}
+                        {% endfor %}
+                    </table>
+                </div>
+              </div>
+            </div>
+        {% endif %}
+
     {% else %}
     <div class="alert alert-warning text-center">{% trans "No Structure." %}</div>
     {% endif %}
