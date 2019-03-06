@@ -1,7 +1,10 @@
 from django.db import models
 from model_utils import Choices
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from django.contrib.auth.models import Group
+
 import json
+
 
 # Name Class
 class EveName(models.Model):
@@ -284,3 +287,9 @@ class NotificationPing(models.Model):
 
     def __str__(self):
         return "%s for %s at %s" % (self.__class__.__name__, self.title, str(self.time.strftime("%Y %m %d %H:%M:%S")))
+
+
+class GroupReqWebhook(models.Model):
+    group = models.ForeignKey(Group, on_delete=models.CASCADE)
+    enabled = models.BooleanField()
+    webhook = models.TextField()
