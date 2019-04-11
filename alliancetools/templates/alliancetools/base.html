@@ -35,15 +35,16 @@
     <div class="col-lg-12">
         <div class="col-lg-10 col-lg-offset-1 container">
             <h4> </h4>
-            {% if add_tokens %}
             <nav class="navbar navbar-default">
                 <div class="container-fluid">
                     <ul class="nav navbar-nav ">
-                        <li><a href="{% url 'alliancetools:add_char' %}">{% trans "Add New Token" %}</a></li>
+                       {% if add_tokens %}<li><a href="{% url 'alliancetools:add_char' %}">{% trans "Add New Token" %}</a></li>{% endif %}
+                       {% if add_tokens %}<li><a href="{% url 'alliancetools:add_poco' %}">{% trans "Add New Poco Token" %}</a></li>{% endif %}
+                       {% if add_structs %}<li><a href="{% url 'alliancetools:add_structs' %}">{% trans "Add New Structure Token" %}</a></li>{% endif %}
                     </ul>
                 </div>
             </nav>
-            {% endif %}
+
             {% block at_block %}{% endblock %}
         </div>
 

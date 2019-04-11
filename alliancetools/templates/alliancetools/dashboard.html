@@ -42,6 +42,10 @@
                                     {% if alt.last_update_assets %}<tr>
                                         <td class="text-left">Assets</td><td>{{ alt.last_update_assets|naturaltime }}</td><td>{{ alt.next_update_assets|naturaltime }}</td>
                                     </tr>{% endif %}
+
+                                    {% if alt.last_update_pocos %}<tr>
+                                        <td class="text-left">Assets</td><td>{{ alt.last_update_pocos|naturaltime }}</td><td>{{ alt.next_update_pocos|naturaltime }}</td>
+                                    </tr>{% endif %}
                                 </table>
                                 {% else %}
                                     <div class="alert alert-warning text-center">{% trans "Token Not Updated" %}</div>

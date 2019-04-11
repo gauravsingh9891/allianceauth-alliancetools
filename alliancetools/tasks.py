@@ -4,7 +4,7 @@ import os
 from celery import shared_task
 from .models import CorpAsset, ItemName, TypeName, Structure, Notification, CorporationWalletJournalEntry, \
     CorporationWalletDivision, AllianceToolCharacter, StructureService, BridgeOzoneLevel, MapSolarSystem, EveName, \
-    NotificationAlert, NotificationPing
+    NotificationAlert, NotificationPing, Poco
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Token
 from .esi_workaround import EsiResponseClient
@@ -577,31 +577,52 @@ def run_char_updates(self, character_id):
 
     dt_now = datetime.datetime.utcnow().replace(tzinfo=timezone.utc)  # whats the time Mr Wolf!
 
-    if character.next_update_notifs:
-        if character.next_update_notifs < dt_now:
-            logger.debug(update_character_notifications(character.character.character_id))  # cache expired
-    else:
-        logger.debug(update_character_notifications(character.character.character_id))  # new/no info
+    try:
+        if character.next_update_notifs:
+            if character.next_update_notifs < dt_now:
+                logger.debug(update_character_notifications(character.character.character_id))  # cache expired
+        else:
+            logger.debug(update_character_notifications(character.character.character_id))  # new/no info
+    except:
+        logging.exception("Messsage")
 
-    if character.next_update_structs:
-        if character.next_update_structs < dt_now:
-            logger.debug(update_corp_structures(character.character.character_id))  # cache expired
-    else:
-        logger.debug(update_corp_structures(character.character.character_id))  # new/no info
+    try:
+        if character.next_update_structs:
+            if character.next_update_structs < dt_now:
+                logger.debug(update_corp_structures(character.character.character_id))  # cache expired
+        else:
+            logger.debug(update_corp_structures(character.character.character_id))  # new/no info
+    except:
+        logging.exception("Messsage")
 
-    if character.next_update_wallet:
-        if character.next_update_wallet < dt_now:
-            logger.debug(update_corp_wallet_division(character.character.character_id))  # cache expired
-    else:
-        logger.debug(update_corp_wallet_division(character.character.character_id, full_update=True))  # new/no info
+    try:
+        if character.next_update_wallet:
+            if character.next_update_wallet < dt_now:
+                logger.debug(update_corp_wallet_division(character.character.character_id))  # cache expired
+        else:
+            logger.debug(update_corp_wallet_division(character.character.character_id, full_update=True))  # new/no info
+    except:
+        logging.exception("Messsage")
 
-    if character.next_update_assets:
-        if character.next_update_assets < dt_now:
-            logger.debug(update_corp_assets(character.character.character_id))  # cache expired
-            if character.next_update_structs:
-                logger.debug(run_ozone_levels(character_id))
-    else:
-        logger.debug(update_corp_assets(character.character.character_id))  # new/no info
+    try:
+        if character.next_update_assets:
+            if character.next_update_assets < dt_now:
+                logger.debug(update_corp_assets(character.character.character_id))  # cache expired
+                if character.next_update_structs:
+                    logger.debug(run_ozone_levels(character_id))
+        else:
+            logger.debug(update_corp_assets(character.character.character_id))  # new/no info
+    except:
+        logging.exception("Messsage")
+
+    try:
+        if character.next_update_pocos:
+            if character.next_update_pocos < dt_now:
+                logger.debug(update_corp_pocos(character.character.character_id))  # cache expired
+        else:
+            logger.debug(update_corp_pocos(character.character.character_id))  # new/no info
+    except:
+        logging.exception("Messsage")
 
     return "Finished Update for: %s" % (str(character_id))
 
@@ -634,7 +655,7 @@ def run_ozone_levels(self, character_id):
     return "Finished Ozone for: %s" % (str(character_id))
 
 
-@shared_task()
+@shared_task
 def send_discord_pings():
 
     def filetime_to_dt(ft):
@@ -688,147 +709,149 @@ def send_discord_pings():
 
     for notification in notifications:
         if notification.notification_id not in already_pinged:
-            if notification.notification_type in structure_pings:
-                attack_hooks = discord_hooks.filter(structure_ping=True)
-                if notification.notification_type == 'StructureLostArmor':
-                    body = "Structure has lost its Armor"
-                    notification_data = yaml.load(notification.notification_text)
-                    structure = Structure.objects.get(structure_id=notification_data['structureID'])
-                    structure_name = structure.name
-                    structure_type = structure.type_name.name
-                    system_name = structure.system_name.solarSystemName
-                    _secondsRemaining = notification_data['timeLeft'] / 10000000  # seconds
-                    _refTimeDelta = datetime.timedelta(seconds=_secondsRemaining)
-                    # print (refTimeDelta.seconds, flush=True)
-                    tile_till = format_timedelta(_refTimeDelta)
-                    timestamp = notification.timestamp
-                    ref_date_time = timestamp + _refTimeDelta
-                    corp_name = notification.character.character.corporation_name
-                    corp_ticker = notification.character.character.corporation_ticker
-                    corp_id = notification.character.character.corporation_id
-                    footer = {"icon_url": "https://imageserver.eveonline.com/Corporation/%s_64.png" % (str(corp_id)),
-                              "text": "%s (%s)" % (corp_name, corp_ticker)}
-                    fields = [{'name': 'System', 'value': system_name, 'inline': True},
-                              {'name': 'Type', 'value': structure_type, 'inline': True},
-                              {'name': 'Owner', 'value': corp_name, 'inline': False},
-                              {'name': 'Time Till Out', 'value': tile_till, 'inline': False},
-                              {'name': 'Date Out', 'value': ref_date_time.strftime("%Y-%m-%d %H:%M"), 'inline': False}]
+            try:
+                if notification.notification_type in structure_pings:
+                    attack_hooks = discord_hooks.filter(structure_ping=True)
+                    if notification.notification_type == 'StructureLostArmor':
+                        body = "Structure has lost its Armor"
+                        notification_data = yaml.load(notification.notification_text)
+                        structure = Structure.objects.get(structure_id=notification_data['structureID'])
+                        structure_name = structure.name
+                        structure_type = structure.type_name.name
+                        system_name = structure.system_name.solarSystemName
+                        _secondsRemaining = notification_data['timeLeft'] / 10000000  # seconds
+                        _refTimeDelta = datetime.timedelta(seconds=_secondsRemaining)
+                        tile_till = format_timedelta(_refTimeDelta)
+                        timestamp = notification.timestamp
+                        ref_date_time = timestamp + _refTimeDelta
+                        corp_name = notification.character.character.corporation_name
+                        corp_ticker = notification.character.character.corporation_ticker
+                        corp_id = notification.character.character.corporation_id
+                        footer = {"icon_url": "https://imageserver.eveonline.com/Corporation/%s_64.png" % (str(corp_id)),
+                                  "text": "%s (%s)" % (corp_name, corp_ticker)}
+                        fields = [{'name': 'System', 'value': system_name, 'inline': True},
+                                  {'name': 'Type', 'value': structure_type, 'inline': True},
+                                  {'name': 'Owner', 'value': corp_name, 'inline': False},
+                                  {'name': 'Time Till Out', 'value': tile_till, 'inline': False},
+                                  {'name': 'Date Out', 'value': ref_date_time.strftime("%Y-%m-%d %H:%M"), 'inline': False}]
 
-                    ping = process_ping(notification.notification_id,
-                                        structure_name,
-                                        body,
-                                        fields,
-                                        timestamp,
-                                        "structure",
-                                        11075584,
-                                        ('https://imageserver.eveonline.com/Type/%s_64.png'
-                                            % structure.type_id),
-                                        ('http://evemaps.dotlan.net/system/%s' % system_name.replace(' ', '_')),
-                                        footer)
-                    if ping:
-                        for hook in attack_hooks:
-                            embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                        ping = process_ping(notification.notification_id,
+                                            structure_name,
+                                            body,
+                                            fields,
+                                            timestamp,
+                                            "structure",
+                                            11075584,
+                                            ('https://imageserver.eveonline.com/Type/%s_64.png'
+                                                % structure.type_id),
+                                            ('http://evemaps.dotlan.net/system/%s' % system_name.replace(' ', '_')),
+                                            footer)
+                        if ping:
+                            for hook in attack_hooks:
+                                embed_lists[hook.discord_webhook]['embeds'].append(ping)
 
-                elif notification.notification_type == 'StructureUnderAttack':
-                    body = "Structure under Attack!"
-                    notification_data = yaml.load(notification.notification_text)
-                    structure = Structure.objects.get(structure_id=notification_data['structureID'])
-                    structure_name = structure.name
-                    structure_type = structure.type_name.name
-                    system_name = structure.system_name.solarSystemName
-                    timestamp = notification.timestamp
-                    corp_name = notification.character.character.corporation_name
-                    corp_ticker = notification.character.character.corporation_ticker
-                    corp_id = notification.character.character.corporation_id
-                    footer = {"icon_url": "https://imageserver.eveonline.com/Corporation/%s_64.png" % (str(corp_id)),
-                              "text": "%s (%s)" % (corp_name, corp_ticker)}
+                    elif notification.notification_type == 'StructureUnderAttack':
+                        body = "Structure under Attack!"
+                        notification_data = yaml.load(notification.notification_text)
+                        structure = Structure.objects.get(structure_id=notification_data['structureID'])
+                        structure_name = structure.name
+                        structure_type = structure.type_name.name
+                        system_name = structure.system_name.solarSystemName
+                        timestamp = notification.timestamp
+                        corp_name = notification.character.character.corporation_name
+                        corp_ticker = notification.character.character.corporation_ticker
+                        corp_id = notification.character.character.corporation_id
+                        footer = {"icon_url": "https://imageserver.eveonline.com/Corporation/%s_64.png" % (str(corp_id)),
+                                  "text": "%s (%s)" % (corp_name, corp_ticker)}
 
-                    attackerStr = "%s, **%s**" % (notification_data.get('corpName', ""),
-                                                  notification_data.get('allianceName', "*-*"))
+                        attackerStr = "%s, **%s**" % (notification_data.get('corpName', ""),
+                                                      notification_data.get('allianceName', "*-*"))
 
-                    fields = [{'name': 'System', 'value': system_name, 'inline': True},
-                              {'name': 'Type', 'value': structure_type, 'inline': True},
-                              {'name': 'Attacker', 'value': attackerStr, 'inline': True}]
+                        fields = [{'name': 'System', 'value': system_name, 'inline': True},
+                                  {'name': 'Type', 'value': structure_type, 'inline': True},
+                                  {'name': 'Attacker', 'value': attackerStr, 'inline': True}]
 
-                    ping = process_ping(notification.notification_id,
-                                        structure_name,
-                                        body,
-                                        fields,
-                                        timestamp,
-                                        "structure",
-                                        11075584,
-                                        ('https://imageserver.eveonline.com/Type/%s_64.png'
-                                            % structure.type_id),
-                                        ('http://evemaps.dotlan.net/system/%s' % system_name.replace(' ', '_')),
-                                        footer)
-                    if ping:
-                        for hook in attack_hooks:
-                            embed_lists[hook.discord_webhook]['alert_ping'] = True
-                            embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                        ping = process_ping(notification.notification_id,
+                                            structure_name,
+                                            body,
+                                            fields,
+                                            timestamp,
+                                            "structure",
+                                            11075584,
+                                            ('https://imageserver.eveonline.com/Type/%s_64.png'
+                                                % structure.type_id),
+                                            ('http://evemaps.dotlan.net/system/%s' % system_name.replace(' ', '_')),
+                                            footer)
+                        if ping:
+                            for hook in attack_hooks:
+                                embed_lists[hook.discord_webhook]['alert_ping'] = True
+                                embed_lists[hook.discord_webhook]['embeds'].append(ping)
 
-            elif notification.notification_type in entosis_ping:
-                enotosis_hooks = discord_hooks.filter(structure_ping=True)
+                elif notification.notification_type in entosis_ping:
+                    enotosis_hooks = discord_hooks.filter(structure_ping=True)
 
-                if notification.notification_type == "SovStructureReinforced":
-                    title = "Entosis notification"
-                    notification_data = yaml.load(notification.notification_text)
-                    system_name = MapSolarSystem.objects.get(
-                        solarSystemID=notification_data['solarSystemID']).solarSystemName
-                    body = "Sov Struct Reinforced in %s" % system_name
-                    if notification_data['campaignEventType'] == 1:
-                        body = "TCU Reinforced in %s" % system_name
-                    elif notification_data['campaignEventType'] == 2:
-                        body = "IHub Reinforced in %s" % system_name
-                    ref_time_delta = filetime_to_dt(notification_data['decloakTime'])
+                    if notification.notification_type == "SovStructureReinforced":
+                        title = "Entosis notification"
+                        notification_data = yaml.load(notification.notification_text)
+                        system_name = MapSolarSystem.objects.get(
+                            solarSystemID=notification_data['solarSystemID']).solarSystemName
+                        body = "Sov Struct Reinforced in %s" % system_name
+                        if notification_data['campaignEventType'] == 1:
+                            body = "TCU Reinforced in %s" % system_name
+                        elif notification_data['campaignEventType'] == 2:
+                            body = "IHub Reinforced in %s" % system_name
+                        ref_time_delta = filetime_to_dt(notification_data['decloakTime'])
 
-                    # print (refTimeDelta.seconds, flush=True)
-                    timestamp = notification.timestamp
-                    tile_till = format_timedelta(
-                        ref_time_delta.replace(tzinfo=timezone.utc) - datetime.datetime.now(timezone.utc))
+                        # print (refTimeDelta.seconds, flush=True)
+                        timestamp = notification.timestamp
+                        tile_till = format_timedelta(
+                            ref_time_delta.replace(tzinfo=timezone.utc) - datetime.datetime.now(timezone.utc))
 
-                    fields = [{'name': 'System', 'value': system_name, 'inline': True},
-                              {'name': 'Time Till Decloaks', 'value': tile_till, 'inline': False},
-                              {'name': 'Date Out', 'value': ref_time_delta.strftime("%Y-%m-%d %H:%M"), 'inline': False}]
-                    ping = process_ping(notification.notification_id,
-                                        title,
-                                        body,
-                                        fields,
-                                        timestamp,
-                                        "entosis",
-                                        11075584,
-                                        False,
-                                        ("http://evemaps.dotlan.net/system/%s" % system_name.replace(' ', '_')),
-                                        False)
+                        fields = [{'name': 'System', 'value': system_name, 'inline': True},
+                                  {'name': 'Time Till Decloaks', 'value': tile_till, 'inline': False},
+                                  {'name': 'Date Out', 'value': ref_time_delta.strftime("%Y-%m-%d %H:%M"), 'inline': False}]
+                        ping = process_ping(notification.notification_id,
+                                            title,
+                                            body,
+                                            fields,
+                                            timestamp,
+                                            "entosis",
+                                            11075584,
+                                            False,
+                                            ("http://evemaps.dotlan.net/system/%s" % system_name.replace(' ', '_')),
+                                            False)
 
-                    if ping:
-                        for hook in enotosis_hooks:
-                            embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                        if ping:
+                            for hook in enotosis_hooks:
+                                embed_lists[hook.discord_webhook]['embeds'].append(ping)
 
-                elif notification.notification_type == "EntosisCaptureStarted":
-                    title = "Entosis notification"
-                    notification_data = yaml.load(notification.notification_text)
-                    system_name = MapSolarSystem.objects.get(
-                        solarSystemID=notification_data['solarSystemID']).solarSystemName
-                    structure_name = TypeName.objects.get(type_id=notification_data['structureTypeID']).name
-                    body = "Entosis has started in %s on %s" % (system_name, structure_name)
-                    timestamp = notification.timestamp
-                    fields = [{'name': 'System', 'value': system_name, 'inline': True}]
+                    elif notification.notification_type == "EntosisCaptureStarted":
+                        title = "Entosis notification"
+                        notification_data = yaml.load(notification.notification_text)
+                        system_name = MapSolarSystem.objects.get(
+                            solarSystemID=notification_data['solarSystemID']).solarSystemName
+                        structure_name = TypeName.objects.get(type_id=notification_data['structureTypeID']).name
+                        body = "Entosis has started in %s on %s" % (system_name, structure_name)
+                        timestamp = notification.timestamp
+                        fields = [{'name': 'System', 'value': system_name, 'inline': True}]
 
-                    ping = process_ping(notification.notification_id,
-                                        title,
-                                        body,
-                                        fields,
-                                        timestamp,
-                                        "entosis",
-                                        11075584,
-                                        False,
-                                        ("http://evemaps.dotlan.net/system/%s" % system_name.replace(' ', '_')),
-                                        False)
+                        ping = process_ping(notification.notification_id,
+                                            title,
+                                            body,
+                                            fields,
+                                            timestamp,
+                                            "entosis",
+                                            11075584,
+                                            False,
+                                            ("http://evemaps.dotlan.net/system/%s" % system_name.replace(' ', '_')),
+                                            False)
 
-                    if ping:
-                        for hook in enotosis_hooks:
-                            embed_lists[hook.discord_webhook]['alert_ping'] = True
-                            embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                        if ping:
+                            for hook in enotosis_hooks:
+                                embed_lists[hook.discord_webhook]['alert_ping'] = True
+                                embed_lists[hook.discord_webhook]['embeds'].append(ping)
+            except:
+                logging.exception("Messsage")
 
     for hook, data in embed_lists.items():
         if len(data['embeds']) > 0:
@@ -844,3 +867,70 @@ def send_discord_pings():
                 time.sleep(1)
 
 
+@shared_task
+def update_corp_pocos(character_id):
+    logger.debug("Started pocos for: %s" % str(character_id))
+
+    req_scopes = ['esi-planets.read_customs_offices.v1', 'esi-characters.read_corporation_roles.v1']
+    req_roles = ['CEO', 'Director']
+
+    token = _get_token(character_id, req_scopes)
+    c = EsiResponseClient(token).get_esi_client(response=True)
+
+    # check roles!
+    roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
+
+    has_roles = False
+    for role in roles.get('roles', []):
+        if role in req_roles:
+            has_roles = True
+
+    if not has_roles:
+        return "No Roles on Character"
+
+    _character = AllianceToolCharacter.objects.get(character__character_id=character_id)
+    _corporation = EveCorporationInfo.objects.get(corporation_id=_character.character.corporation_id)
+
+    poco_bulk = []
+    poco_pages = 1
+    cache_expires = 0
+    total_pages = 1
+    while poco_pages <= total_pages:
+
+        structures, result = c.Planetary_Interaction.get_corporations_corporation_id_customs_offices(
+            corporation_id=_corporation.corporation_id,
+            page=poco_pages).result()
+
+        total_pages = int(result.headers['X-Pages'])
+        cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(
+            tzinfo=timezone.utc)
+
+        for structure in structures:
+            structure_ob = Poco(corp=_corporation,
+                                office_id=structure.get('office_id'),
+                                system_id=structure.get('system_id'),
+                                standing_level=structure.get('standing_level'),
+                                terrible_standing_tax_rate=structure.get('terrible_standing_tax_rate'),
+                                neutral_standing_tax_rate=structure.get('neutral_standing_tax_rate'),
+                                good_standing_tax_rate=structure.get('good_standing_tax_rate'),
+                                excellent_standing_tax_rate=structure.get('excellent_standing_tax_rate'),
+                                bad_standing_tax_rate=structure.get('bad_standing_tax_rate'),
+                                corporation_tax_rate=structure.get('corporation_tax_rate'),
+                                alliance_tax_rate=structure.get('alliance_tax_rate'),
+                                reinforce_exit_start=structure.get('reinforce_exit_start'),
+                                reinforce_exit_end=structure.get('reinforce_exit_end'),
+                                allow_alliance_access= structure.get('allow_alliance_access'),
+                                allow_access_with_standings= structure.get('allow_access_with_standings')
+                                )
+
+            poco_bulk.append(structure_ob)
+
+        poco_pages += 1
+
+    Poco.objects.bulk_create(poco_bulk, batch_size=500)
+
+    AllianceToolCharacter.objects.filter(character__character_id=character_id).update(
+        next_update_pocos=cache_expires,
+        last_update_pocos=datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
+
+    return "Finished Pocos for: %s" % (str(character_id))

@@ -14,28 +14,47 @@ from django.conf import settings
 from django.core.exceptions import PermissionDenied
 
 from .models import AllianceToolCharacter, Structure, CorpAsset, AllianceToolJob, AllianceToolJobComment, \
-    NotificationPing
+    NotificationPing, Poco
 from .forms import AddJob, AddComment, EditJob
 from easyaudit.models import CRUDEvent
+
 
 CORP_REQUIRED_SCOPES = ['esi-characters.read_notifications.v1',
                         'esi-assets.read_corporation_assets.v1',
                         'esi-characters.read_corporation_roles.v1',
                         'esi-wallet.read_corporation_wallets.v1',
                         'esi-corporations.read_structures.v1',
-                        'esi-universe.read_structures.v1']
+                        'esi-universe.read_structures.v1',
+                        'esi-planets.read_customs_offices.v1']
+
+
+POCO_REQUIRED_SCOPES = ['esi-planets.read_customs_offices.v1',
+                        'esi-characters.read_corporation_roles.v1']
+
+
+STRUCTURES_REQUIRED_SCOPES = ['esi-corporations.read_structures.v1',
+                              'esi-universe.read_structures.v1',
+                              'esi-characters.read_corporation_roles.v1',
+                              'esi-characters.read_notifications.v1']
 
 
 @login_required
-@permission_required('alliancetools.admin_alliance_tools')
 def dashboard(request):
     try:
-        main_characters = AllianceToolCharacter.objects.all()
+        if(request.user.has_perm('alliancetools.admin_alliance_tools')):
+            main_characters = AllianceToolCharacter.objects.all()
+        elif request.user.has_perm('alliancetools.corp_level_alliance_tools'):
+            main_characters = AllianceToolCharacter.objects.filter(
+                character__corporation_id=request.user.profile.main_character.corporation_id)
+        else:
+            raise PermissionDenied('You do not have permission to be here. This has been Logged!')
 
         context = {
             'alts': main_characters,
-            'add_tokens' : request.user.has_perm('alliancetools.admin_alliance_tools')
+            'add_tokens' : request.user.has_perm('alliancetools.admin_alliance_tools'),
+            'add_structs': request.user.has_perm('alliancetools.corp_level_alliance_tools')
         }
+
         return render(request, 'alliancetools/dashboard.html', context=context)
 
     except:
@@ -78,11 +97,43 @@ def alliancetools_add_char(request, token):
 
 
 @login_required
+@permission_required('alliancetools.admin_alliance_tools')
+@token_required(scopes=POCO_REQUIRED_SCOPES)
+def alliancetools_add_poco(request, token):
+    try:
+        AllianceToolCharacter.objects.get_or_create(character=EveCharacter.objects.get(character_id=token.character_id))
+        return redirect('alliancetools:dashboard')
+
+    except:
+        messages.error(request, ('Error Adding Character!'))
+
+    return redirect('alliancetools:dashboard')
+
+
+@login_required
+@permission_required('alliancetools.corp_level_alliance_tools')
+@token_required(scopes=STRUCTURES_REQUIRED_SCOPES)
+def alliancetools_add_structures(request, token):
+    try:
+        AllianceToolCharacter.objects.get_or_create(character=EveCharacter.objects.get(character_id=token.character_id))
+        return redirect('alliancetools:dashboard')
+
+    except:
+        messages.error(request, ('Error Adding Character!'))
+
+    return redirect('alliancetools:dashboard')
+
+
+@login_required
 def structures(request):
     if request.user.has_perm('alliancetools.access_alliance_tools_structures'):
         structures = Structure.objects.select_related('corporation', 'system_name', 'type_name').all().prefetch_related('structureservice_set')
     elif request.user.has_perm('alliancetools.access_alliance_tools_structures_renter'):
-        structures = Structure.objects.select_related('corporation', 'system_name', 'type_name').filter(corporation__corporation_id=settings.RENTER_HOLDING_CORP_ID).prefetch_related('structureservice_set')
+        structures = Structure.objects.select_related('corporation', 'system_name', 'type_name').filter(
+            corporation__corporation_id=settings.RENTER_HOLDING_CORP_ID).prefetch_related('structureservice_set')
+    elif request.user.has_perm('alliancetools.corp_level_alliance_tools'):
+        structures = Structure.objects.select_related('corporation', 'system_name', 'type_name').filter(
+            corporation__corporation_id=request.user.profile.main_character.corporation_id).prefetch_related('structureservice_set')
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
 
@@ -92,6 +143,23 @@ def structures(request):
         'view_fittings' : (request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings') or request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings_renter'))
     }
     return render(request, 'alliancetools/structures.html', context=context)
+
+
+@login_required
+def pocos(request):
+    if request.user.has_perm('alliancetools.access_alliance_tools_structures'):
+        structures = Poco.objects.all()
+    elif request.user.has_perm('alliancetools.access_alliance_tools_structures_renter'):
+        structures = Poco.objects.all()
+    else:
+        raise PermissionDenied('You do not have permission to be here. This has been Logged!')
+
+    context = {
+        'structures': structures,
+        'add_tokens': request.user.has_perm('alliancetools.admin_alliance_tools'),
+        'view_fittings': (request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings') or request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings_renter'))
+    }
+    return render(request, 'alliancetools/pocos.html', context=context)
 
 
 @login_required

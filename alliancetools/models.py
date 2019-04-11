@@ -70,11 +70,14 @@ class AllianceToolCharacter(models.Model):
     last_update_notifs = models.DateTimeField(null=True, default=None)
     last_update_assets = models.DateTimeField(null=True, default=None)
     last_update_structs = models.DateTimeField(null=True, default=None)
+    last_update_pocos = models.DateTimeField(null=True, default=None)
 
     next_update_wallet = models.DateTimeField(null=True, default=None)
     next_update_notifs = models.DateTimeField(null=True, default=None)
     next_update_assets = models.DateTimeField(null=True, default=None)
     next_update_structs = models.DateTimeField(null=True, default=None)
+    next_update_pocos = models.DateTimeField(null=True, default=None)
+
 
     def __str__(self):
         return "{}'s AllianceToolCharacter".format(self.character.character_name)
@@ -86,7 +89,8 @@ class AllianceToolCharacter(models.Model):
                        ('access_alliance_tools_structure_fittings', 'Can access structure fittings'),
                        ('access_alliance_tools_structures_renter', 'Can access renter structures'),
                        ('access_alliance_tools_structure_fittings_renter', 'Can access renter structure fittings'),
-                       ('admin_alliance_tools', 'Can add tokens to alliance tools'))
+                       ('admin_alliance_tools', 'Can add tokens to alliance tools'),
+                       ('corp_level_alliance_tools', 'Can add corporate structure tokens to alliance tools '))
 
 
 # Wallet Models *****************************************************************************************************
@@ -299,3 +303,31 @@ class GroupReqWebhook(models.Model):
 
     def __str__(self):
         return "Group Hook for: %s" % self.group.name
+
+
+class Poco(models.Model):
+    corp = models.ForeignKey(EveCorporationInfo, on_delete=models.CASCADE)
+
+    office_id = models.BigIntegerField()
+
+    system_id = models.IntegerField()
+
+    name = models.CharField(max_length=100, null=True, default=None)
+
+    _state_enum = Choices('bad', 'excellent', 'good', 'neutral', 'terrible')
+    standing_level = models.CharField(max_length=15, choices=_state_enum, null=True, default=None)
+
+    terrible_standing_tax_rate = models.DecimalField(max_digits=6, decimal_places=2, null=True, default=None)
+    neutral_standing_tax_rate = models.DecimalField(max_digits=6, decimal_places=2, null=True, default=None)
+    good_standing_tax_rate = models.DecimalField(max_digits=6, decimal_places=2, null=True, default=None)
+    excellent_standing_tax_rate = models.DecimalField(max_digits=6, decimal_places=2, null=True, default=None)
+    bad_standing_tax_rate = models.DecimalField(max_digits=6, decimal_places=2, null=True, default=None)
+
+    corporation_tax_rate = models.DecimalField(max_digits=6, decimal_places=2, null=True, default=None)
+    alliance_tax_rate = models.DecimalField(max_digits=6, decimal_places=2, null=True, default=None)
+
+    reinforce_exit_start = models.IntegerField()
+    reinforce_exit_end = models.IntegerField()
+
+    allow_alliance_access = models.BooleanField()
+    allow_access_with_standings = models.BooleanField()
