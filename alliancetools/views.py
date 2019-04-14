@@ -126,21 +126,33 @@ def alliancetools_add_structures(request, token):
 
 @login_required
 def structures(request):
+    structures = False
+
     if request.user.has_perm('alliancetools.access_alliance_tools_structures'):
+        #print("admin", flush=True)
         structures = Structure.objects.select_related('corporation', 'system_name', 'type_name').all().prefetch_related('structureservice_set')
     elif request.user.has_perm('alliancetools.access_alliance_tools_structures_renter'):
+        #print("renter", flush=True)
         structures = Structure.objects.select_related('corporation', 'system_name', 'type_name').filter(
             corporation__corporation_id=settings.RENTER_HOLDING_CORP_ID).prefetch_related('structureservice_set')
-    elif request.user.has_perm('alliancetools.corp_level_alliance_tools'):
-        structures = Structure.objects.select_related('corporation', 'system_name', 'type_name').filter(
-            corporation__corporation_id=request.user.profile.main_character.corporation_id).prefetch_related('structureservice_set')
-    else:
+
+    if request.user.has_perm('alliancetools.corp_level_alliance_tools'):
+        #print("corp", flush=True)
+        if not structures:
+            structures = Structure.objects.select_related('corporation', 'system_name', 'type_name').filter(
+                corporation__corporation_id=request.user.profile.main_character.corporation_id).prefetch_related('structureservice_set')
+        else:
+            structures = structures | Structure.objects.select_related('corporation', 'system_name', 'type_name').filter(
+                corporation__corporation_id=request.user.profile.main_character.corporation_id).prefetch_related('structureservice_set')
+
+    if not structures:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
 
     context = {
         'structures': structures,
-        'add_tokens' : request.user.has_perm('alliancetools.admin_alliance_tools'),
-        'view_fittings' : (request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings') or request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings_renter'))
+        'add_tokens': request.user.has_perm('alliancetools.admin_alliance_tools'),
+        'add_structs': request.user.has_perm('alliancetools.corp_level_alliance_tools'),
+        'view_fittings': (request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings') or request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings_renter'))
     }
     return render(request, 'alliancetools/structures.html', context=context)
 
