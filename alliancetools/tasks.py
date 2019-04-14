@@ -600,52 +600,52 @@ def run_char_updates(self, character_id):
 
     dt_now = datetime.datetime.utcnow().replace(tzinfo=timezone.utc)  # whats the time Mr Wolf!
 
-    try:
-        if character.next_update_notifs:
-            if character.next_update_notifs < dt_now:
-                logger.debug(update_character_notifications(character.character.character_id))  # cache expired
-        else:
-            logger.debug(update_character_notifications(character.character.character_id))  # new/no info
-    except:
-        logging.exception("Messsage")
+    #try:
+    if character.next_update_notifs:
+        if character.next_update_notifs < dt_now:
+            logger.debug(update_character_notifications(character.character.character_id))  # cache expired
+    else:
+        logger.debug(update_character_notifications(character.character.character_id))  # new/no info
+   # except:
+    #    logging.exception("Messsage")
 
-    try:
-        if character.next_update_structs:
-            if character.next_update_structs < dt_now:
-                logger.debug(update_corp_structures(character.character.character_id))  # cache expired
-        else:
-            logger.debug(update_corp_structures(character.character.character_id))  # new/no info
-    except:
-        logging.exception("Messsage")
+   # try:
+    if character.next_update_structs:
+        if character.next_update_structs < dt_now:
+            logger.debug(update_corp_structures(character.character.character_id))  # cache expired
+    else:
+        logger.debug(update_corp_structures(character.character.character_id))  # new/no info
+  #  except:
+   #     logging.exception("Messsage")
 
-    try:
-        if character.next_update_wallet:
-            if character.next_update_wallet < dt_now:
-                logger.debug(update_corp_wallet_division(character.character.character_id))  # cache expired
-        else:
-            logger.debug(update_corp_wallet_division(character.character.character_id, full_update=True))  # new/no info
-    except:
-        logging.exception("Messsage")
+    #try:
+    if character.next_update_wallet:
+        if character.next_update_wallet < dt_now:
+            logger.debug(update_corp_wallet_division(character.character.character_id))  # cache expired
+    else:
+        logger.debug(update_corp_wallet_division(character.character.character_id, full_update=True))  # new/no info
+    #except:
+    #    logging.exception("Messsage")
 
-    try:
-        if character.next_update_assets:
-            if character.next_update_assets < dt_now:
-                logger.debug(update_corp_assets(character.character.character_id))  # cache expired
-                if character.next_update_structs:
-                    logger.debug(run_ozone_levels(character_id))
-        else:
-            logger.debug(update_corp_assets(character.character.character_id))  # new/no info
-    except:
-        logging.exception("Messsage")
+   # try:
+    if character.next_update_assets:
+        if character.next_update_assets < dt_now:
+            logger.debug(update_corp_assets(character.character.character_id))  # cache expired
+            if character.next_update_structs:
+                logger.debug(run_ozone_levels(character_id))
+    else:
+        logger.debug(update_corp_assets(character.character.character_id))  # new/no info
+    #except:
+    #    logging.exception("Messsage")
 
-    try:
-        if character.next_update_pocos:
-            if character.next_update_pocos < dt_now:
-                logger.debug(update_corp_pocos(character.character.character_id))  # cache expired
-        else:
-            logger.debug(update_corp_pocos(character.character.character_id))  # new/no info
-    except:
-        logging.exception("Messsage")
+   # try:
+    if character.next_update_pocos:
+        if character.next_update_pocos < dt_now:
+            logger.debug(update_corp_pocos(character.character.character_id))  # cache expired
+    else:
+        logger.debug(update_corp_pocos(character.character.character_id))  # new/no info
+    #except:
+    #    logging.exception("Messsage")
 
     return "Finished Update for: %s" % (str(character_id))
 

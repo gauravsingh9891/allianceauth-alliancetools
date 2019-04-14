@@ -26,7 +26,7 @@
                         <span class="label label-default">{{ structure.corporation.corporation_name }}</span></td>
                     <td class="text-center">{{ structure.fuel_expires|date:"Y-m-d" }}</br>
                         <span class="label label-default">{{ structure.fuel_expires|timeuntil }}</span>
-                        {% if structure.type_id == 35841 %}{% with ozone=structure.ozone_level %}  </br><span class="label {% if ozone < 1000000 %}label-warning {% else %}label-default{% endif %}">Liquid Ozone: {{ ozone|intcomma  }}</span>{% endwith %}
+                        {% if structure.type_id == 35841 %}{% with ozone=structure.ozone_level %}{% if ozone %}</br><span class="label {% if ozone < 1000000 %}label-warning {% else %}label-default{% endif %}">Liquid Ozone: {{ ozone|intcomma  }}</span>{% else %}</br><span class="label label-warning">Liquid Ozone: <b>No Token</b></span>{% endif %}{% endwith %}
                     {% endif %}</td>
                     <td class="text-center">{% for service in structure.structureservice_set.all %}
                         {% if service.state == 'online' %}
