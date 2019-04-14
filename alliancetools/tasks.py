@@ -26,8 +26,12 @@ logger = logging.getLogger(__name__)
 SWAGGER_SPEC_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'swagger.json')
 # ['esi-characters.read_notifications.v1', 'esi-assets.read_corporation_assets.v1', 'esi-characters.read_corporation_roles.v1', 'esi-wallet.read_corporation_wallets.v1', 'esi-corporations.read_structures.v1', 'esi-universe.read_structures.v1']
 
+
 def _get_token(character_id, scopes):
-    return Token.objects.filter(character_id=character_id).require_scopes(scopes)[0]
+    try:
+        return Token.objects.filter(character_id=character_id).require_scopes(scopes)[0]
+    except:
+        return False
 
 
 def _get_new_eve_name(entity_id):
@@ -94,6 +98,10 @@ def update_character_notifications(character_id):
     req_scopes = ['esi-characters.read_notifications.v1']
 
     token = _get_token(character_id, req_scopes)
+
+    if not token:
+        return "Not Tokens"
+
     c = EsiResponseClient(token).get_esi_client(response=True)
 
     at_char = AllianceToolCharacter.objects.get(character__character_id=character_id)
@@ -147,6 +155,9 @@ def update_corp_assets(character_id):
     req_roles = ['CEO', 'Director']
 
     token = _get_token(character_id, req_scopes)
+
+    if not token:
+        return "No Tokens"
 
     c = EsiResponseClient(token).get_esi_client(response=True)
     # check roles!
@@ -351,6 +362,10 @@ def update_corp_wallet_journal(character_id, wallet_division, full_update=False)
     req_roles = ['CEO', 'Director', 'Accountant', 'Junior_Accountant']
 
     token = _get_token(character_id, req_scopes)
+
+    if not token:
+        return "No Tokens"
+
     c = EsiResponseClient(token).get_esi_client(response=True)
 
     # check roles!
@@ -416,6 +431,10 @@ def update_corp_wallet_division(character_id, full_update=False):  # pagnated re
     req_roles = ['CEO', 'Director', 'Accountant', 'Junior_Accountant']
 
     token = _get_token(character_id, req_scopes)
+
+    if not token:
+        return "No Tokens"
+
     c = token.get_esi_client()
 
     # check roles!
@@ -489,6 +508,10 @@ def update_corp_structures(character_id):  # pagnated results
     req_roles = ['CEO', 'Director', 'Station_Manager']
 
     token = _get_token(character_id, req_scopes)
+
+    if not token:
+        return "No Tokens"
+
     c = EsiResponseClient(token).get_esi_client(response=True)
 
     # check roles!
@@ -882,6 +905,10 @@ def update_corp_pocos(character_id):
     req_roles = ['CEO', 'Director']
 
     token = _get_token(character_id, req_scopes)
+
+    if not token:
+        return "No Tokens"
+
     c = EsiResponseClient(token).get_esi_client(response=True)
 
     # check roles!
