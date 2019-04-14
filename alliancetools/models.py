@@ -180,9 +180,11 @@ class Structure(models.Model):
 
     @property
     def ozone_level(self):
-        last_ozone = BridgeOzoneLevel.objects.filter(station_id=self.structure_id).order_by('-date')[:1][
-            0].quantity
-        return last_ozone
+        try:
+            last_ozone = BridgeOzoneLevel.objects.filter(station_id=self.structure_id).order_by('-date')[:1][0].quantity
+            return last_ozone
+        except:
+            return 0
 
 
 class StructureService(models.Model):
