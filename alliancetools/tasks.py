@@ -699,8 +699,8 @@ def send_discord_pings():
     entosis_ping = ['SovStructureReinforced', 'EntosisCaptureStarted']
 
     already_pinged = NotificationPing.objects.all().order_by('-time')[:5000].values_list('notification_id', flat=True)
-    notifications = Notification.objects.all()#.filter(
-       # timestamp__gt=(datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(hours=1)))
+    notifications = Notification.objects.filter(
+         timestamp__gt=(datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(hours=1)))
     discord_hooks = NotificationAlert.objects.all()
 
     embed_lists = {}
@@ -718,17 +718,21 @@ def send_discord_pings():
                         structure = Structure.objects.get(structure_id=notification_data['structureID'])
                         structure_name = structure.name
                         structure_type = structure.type_name.name
-                        system_name = structure.system_name.solarSystemName
+                        system_name = '[%s](http://evemaps.dotlan.net/system/%s)' % \
+                                      (structure.system_name.solarSystemName,
+                                       structure.system_name.solarSystemName.replace(' ', '_'))
                         _secondsRemaining = notification_data['timeLeft'] / 10000000  # seconds
                         _refTimeDelta = datetime.timedelta(seconds=_secondsRemaining)
                         tile_till = format_timedelta(_refTimeDelta)
                         timestamp = notification.timestamp
                         ref_date_time = timestamp + _refTimeDelta
-                        corp_name = notification.character.character.corporation_name
+                        corp_name = "[%](https://zkillboard.com/search/%s/)" % \
+                                    (notification.character.character.corporation_name,
+                                     notification.character.character.corporation_name.replace(" ", "%20"))
                         corp_ticker = notification.character.character.corporation_ticker
                         corp_id = notification.character.character.corporation_id
                         footer = {"icon_url": "https://imageserver.eveonline.com/Corporation/%s_64.png" % (str(corp_id)),
-                                  "text": "%s (%s)" % (corp_name, corp_ticker)}
+                                  "text": "%s (%s)" % (notification.character.character.corporation_name, corp_ticker)}
                         fields = [{'name': 'System', 'value': system_name, 'inline': True},
                                   {'name': 'Type', 'value': structure_type, 'inline': True},
                                   {'name': 'Owner', 'value': corp_name, 'inline': False},
@@ -756,16 +760,19 @@ def send_discord_pings():
                         structure = Structure.objects.get(structure_id=notification_data['structureID'])
                         structure_name = structure.name
                         structure_type = structure.type_name.name
-                        system_name = structure.system_name.solarSystemName
+                        system_name = '[%s](http://evemaps.dotlan.net/system/%s)' % \
+                                      (structure.system_name.solarSystemName,
+                                       structure.system_name.solarSystemName.replace(' ', '_'))
                         timestamp = notification.timestamp
-                        corp_name = notification.character.character.corporation_name
                         corp_ticker = notification.character.character.corporation_ticker
                         corp_id = notification.character.character.corporation_id
                         footer = {"icon_url": "https://imageserver.eveonline.com/Corporation/%s_64.png" % (str(corp_id)),
-                                  "text": "%s (%s)" % (corp_name, corp_ticker)}
+                                  "text": "%s (%s)" % (notification.character.character.corporation_name, corp_ticker)}
 
-                        attackerStr = "%s, **%s**" % (notification_data.get('corpName', ""),
-                                                      notification_data.get('allianceName', "*-*"))
+                        attackerStr = "[%s](https://zkillboard.com/search/%s/), **[%s](https://zkillboard.com/search/%s/)**" % (notification_data.get('corpName', ""),
+                                                                  notification_data.get('corpName', "").replace(" ", "%20"),
+                                                                  notification_data.get('allianceName', "*-*"),
+                                                                  notification_data.get('allianceName', "").replace(" ", "%20"))
 
                         fields = [{'name': 'System', 'value': system_name, 'inline': True},
                                   {'name': 'Type', 'value': structure_type, 'inline': True},
