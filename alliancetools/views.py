@@ -128,6 +128,11 @@ def alliancetools_add_structures(request, token):
 def structures(request):
     structures = False
 
+    if not (request.user.has_perm('alliancetools.corp_level_alliance_tools') or
+            request.user.has_perm('alliancetools.access_alliance_tools_structures_renter') or
+            request.user.has_perm('alliancetools.access_alliance_tools_structures')):
+        raise PermissionDenied('You do not have permission to be here. This has been Logged!')
+
     if request.user.has_perm('alliancetools.access_alliance_tools_structures'):
         #print("admin", flush=True)
         structures = Structure.objects.select_related('corporation', 'system_name', 'type_name').all().prefetch_related('structureservice_set')
@@ -144,9 +149,6 @@ def structures(request):
         else:
             structures = structures | Structure.objects.select_related('corporation', 'system_name', 'type_name').filter(
                 corporation__corporation_id=request.user.profile.main_character.corporation_id).prefetch_related('structureservice_set')
-
-    if not structures:
-        raise PermissionDenied('You do not have permission to be here. This has been Logged!')
 
     context = {
         'structures': structures,
