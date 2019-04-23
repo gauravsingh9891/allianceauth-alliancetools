@@ -493,12 +493,32 @@ def update_corp_structures(character_id):  # pagnated results
 
         if _structure_ob:
             if _structure.get('services'):
-                StructureService.objects.filter(structure=_structure_ob).delete()
+                db_services = StructureService.objects.filter(structure=_structure_ob)
                 for service in _structure.get('services'):
-                    _service_ob = StructureService.objects.create(
-                        structure=_structure_ob,
-                        state=service['state'],
-                        name=service['name'])
+                    db_service = db_services.filter(name=service['name'])
+                    if db_service.exists():
+                        if db_service.count()==1:
+                            if db_service[0].state == service['state']:
+                                logger.debug("No update needed")
+                                pass  # no more duplicates
+                            else:
+                                logger.debug("Updated Service")
+                                db_services.filter(name=service['name']).update(
+                                                                state=service['state'])
+                        else:
+                            logger.debug("Dupes")
+
+                            StructureService.objects.filter(structure=_structure_ob,
+                                                            name=service['name']).delete()  # purge dupes
+                            StructureService.objects.create(structure=_structure_ob,
+                                                            state=service['state'],
+                                                            name=service['name'])
+
+                    else:
+                        logger.debug("New Service")
+                        StructureService.objects.create(structure=_structure_ob,
+                                                        state=service['state'],
+                                                        name=service['name'])
 
         return _structure_ob, _created
 
