@@ -738,7 +738,7 @@ def send_discord_pings():
             return False  # print("already pinged", flush=True)
 
     # notifications we care about.
-    structure_pings = ['StructureLostArmor', 'StructureUnderAttack']
+    structure_pings = ['StructureLostShields', 'StructureLostArmor', 'StructureUnderAttack']
     entosis_ping = ['SovStructureReinforced', 'EntosisCaptureStarted']
 
     already_pinged = NotificationPing.objects.all().order_by('-time')[:5000].values_list('notification_id', flat=True)
