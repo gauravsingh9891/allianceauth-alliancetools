@@ -499,14 +499,14 @@ def update_corp_structures(character_id):  # pagnated results
                     if db_service.exists():
                         if db_service.count()==1:
                             if db_service[0].state == service['state']:
-                                logger.debug("No update needed")
+                                #logger.debug("No update needed")
                                 pass  # no more duplicates
                             else:
-                                logger.debug("Updated Service")
+                                #logger.debug("Updated Service")
                                 db_services.filter(name=service['name']).update(
                                                                 state=service['state'])
                         else:
-                            logger.debug("Dupes")
+                            #logger.debug("Dupes")
 
                             StructureService.objects.filter(structure=_structure_ob,
                                                             name=service['name']).delete()  # purge dupes
@@ -515,7 +515,7 @@ def update_corp_structures(character_id):  # pagnated results
                                                             name=service['name'])
 
                     else:
-                        logger.debug("New Service")
+                        #logger.debug("New Service")
                         StructureService.objects.create(structure=_structure_ob,
                                                         state=service['state'],
                                                         name=service['name'])
@@ -742,8 +742,7 @@ def send_discord_pings():
     entosis_ping = ['SovStructureReinforced', 'EntosisCaptureStarted']
 
     already_pinged = NotificationPing.objects.all().order_by('-time')[:5000].values_list('notification_id', flat=True)
-    notifications = Notification.objects.filter(
-         timestamp__gt=(datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(hours=1)))
+    notifications = Notification.objects.all()
     discord_hooks = NotificationAlert.objects.all()
 
     embed_lists = {}
@@ -755,7 +754,49 @@ def send_discord_pings():
             try:
                 if notification.notification_type in structure_pings:
                     attack_hooks = discord_hooks.filter(structure_ping=True)
-                    if notification.notification_type == 'StructureLostArmor':
+                    if notification.notification_type == 'StructureLostShields':
+                        body = "Structure has lost its Shields"
+                        notification_data = yaml.load(notification.notification_text)
+                        structure = Structure.objects.get(structure_id=notification_data['structureID'])
+                        structure_name = structure.name
+                        structure_type = structure.type_name.name
+                        system_name = '[%s](http://evemaps.dotlan.net/system/%s)' % \
+                                      (structure.system_name.solarSystemName,
+                                       structure.system_name.solarSystemName.replace(' ', '_'))
+                        _secondsRemaining = notification_data['timeLeft'] / 10000000  # seconds
+                        _refTimeDelta = datetime.timedelta(seconds=_secondsRemaining)
+                        tile_till = format_timedelta(_refTimeDelta)
+                        timestamp = notification.timestamp
+                        ref_date_time = timestamp + _refTimeDelta
+                        corp_name = "[%](https://zkillboard.com/search/%s/)" % \
+                                    (notification.character.character.corporation_name,
+                                     notification.character.character.corporation_name.replace(" ", "%20"))
+                        corp_ticker = notification.character.character.corporation_ticker
+                        corp_id = notification.character.character.corporation_id
+                        footer = {"icon_url": "https://imageserver.eveonline.com/Corporation/%s_64.png" % (str(corp_id)),
+                                  "text": "%s (%s)" % (notification.character.character.corporation_name, corp_ticker)}
+                        fields = [{'name': 'System', 'value': system_name, 'inline': True},
+                                  {'name': 'Type', 'value': structure_type, 'inline': True},
+                                  {'name': 'Owner', 'value': corp_name, 'inline': False},
+                                  {'name': 'Time Till Out', 'value': tile_till, 'inline': False},
+                                  {'name': 'Date Out', 'value': ref_date_time.strftime("%Y-%m-%d %H:%M"), 'inline': False}]
+
+                        ping = process_ping(notification.notification_id,
+                                            structure_name,
+                                            body,
+                                            fields,
+                                            timestamp,
+                                            "structure",
+                                            11075584,
+                                            ('https://imageserver.eveonline.com/Type/%s_64.png'
+                                                % structure.type_id),
+                                            ('http://evemaps.dotlan.net/system/%s' % system_name.replace(' ', '_')),
+                                            footer)
+                        if ping:
+                            for hook in attack_hooks:
+                                embed_lists[hook.discord_webhook]['embeds'].append(ping)
+
+                    elif notification.notification_type == 'StructureLostArmor':
                         body = "Structure has lost its Armor"
                         notification_data = yaml.load(notification.notification_text)
                         structure = Structure.objects.get(structure_id=notification_data['structureID'])
