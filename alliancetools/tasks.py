@@ -742,7 +742,8 @@ def send_discord_pings():
     entosis_ping = ['SovStructureReinforced', 'EntosisCaptureStarted']
 
     already_pinged = NotificationPing.objects.all().order_by('-time')[:5000].values_list('notification_id', flat=True)
-    notifications = Notification.objects.all()
+    notifications = Notification.objects.filter(
+         timestamp__gt=(datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(hours=1)))
     discord_hooks = NotificationAlert.objects.all()
 
     embed_lists = {}
