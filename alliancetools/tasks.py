@@ -769,7 +769,7 @@ def send_discord_pings():
                         tile_till = format_timedelta(_refTimeDelta)
                         timestamp = notification.timestamp
                         ref_date_time = timestamp + _refTimeDelta
-                        corp_name = "[%](https://zkillboard.com/search/%s/)" % \
+                        corp_name = "[%s](https://zkillboard.com/search/%s/)" % \
                                     (notification.character.character.corporation_name,
                                      notification.character.character.corporation_name.replace(" ", "%20"))
                         corp_ticker = notification.character.character.corporation_ticker
@@ -811,7 +811,7 @@ def send_discord_pings():
                         tile_till = format_timedelta(_refTimeDelta)
                         timestamp = notification.timestamp
                         ref_date_time = timestamp + _refTimeDelta
-                        corp_name = "[%](https://zkillboard.com/search/%s/)" % \
+                        corp_name = "[%s](https://zkillboard.com/search/%s/)" % \
                                     (notification.character.character.corporation_name,
                                      notification.character.character.corporation_name.replace(" ", "%20"))
                         corp_ticker = notification.character.character.corporation_ticker
