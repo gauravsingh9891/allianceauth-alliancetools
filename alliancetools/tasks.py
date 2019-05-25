@@ -698,8 +698,8 @@ def run_ozone_levels(self, character_id):
     return "Finished Ozone for: %s" % (str(character_id))
 
 
-@shared_task
-def send_discord_pings():
+@shared_task(bind=True, base=QueueOnce)
+def send_discord_pings(self):
 
     def filetime_to_dt(ft):
         us = (ft - 116444736000000000) // 10
@@ -1010,7 +1010,7 @@ def send_discord_pings():
 
                     if ping:
                         for hook in transfer_hooks:
-                            embed_lists[hook.discord_webhook]['alert_ping'] = True
+                            embed_lists[hook.discord_webhook]['alert_ping'] = False
                             embed_lists[hook.discord_webhook]['embeds'].append(ping)
 
             except:

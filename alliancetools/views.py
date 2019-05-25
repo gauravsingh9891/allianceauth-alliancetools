@@ -1,6 +1,7 @@
 import logging
 import datetime
 import json
+import yaml
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
@@ -14,8 +15,9 @@ from django.conf import settings
 from django.core.exceptions import PermissionDenied
 
 from .models import AllianceToolCharacter, Structure, CorpAsset, AllianceToolJob, AllianceToolJobComment, \
-    NotificationPing, Poco
+    NotificationPing, Poco, EveName, Notification, MapSolarSystem, TypeName
 from .forms import AddJob, AddComment, EditJob
+from .tasks import _get_new_eve_name
 from easyaudit.models import CRUDEvent
 
 
@@ -328,3 +330,51 @@ def audit_log(request, job_id=None):
                      'description': json_array[0]['fields']['description']})
     return render(request, 'alliancetools/audit_log.html', {'cruds': cruds})
 
+
+@login_required
+def str_txfr(request):
+    if request.user.has_perm('alliancetools.admin_alliance_tools'):
+        notifs = Notification.objects.filter(character__character__corporation_name__contains="Holding", notification_type='OwnershipTransferred', notification_text__contains="structureTypeID: 2233")
+    else:
+        raise PermissionDenied('You do not have permission to be here. This has been Logged!')
+
+    notification_list = []
+    for note in notifs:
+        notification_data = yaml.load(note.notification_text)
+
+        # charID: 972559932
+        # newOwnerCorpID: 98514543
+        # oldOwnerCorpID: 98465001
+        # solarSystemID: 30004626
+        # structureID: 1029829977992
+        # structureName: D4KU-5 - ducktales
+        # structureTypeID: 35835
+
+        system_name = MapSolarSystem.objects.get(
+            solarSystemID=notification_data['solarSystemID']).solarSystemName
+        structure_type = TypeName.objects.get(type_id=notification_data['structureTypeID']).name
+        structure_name = notification_data['structureName']
+
+        new_owner = None
+        old_owner = None
+
+        try:
+            new_owner = eve_name.objects.get(eve_id=notification_data['newOwnerCorpID']).name
+        except:
+            new_owner = _get_new_eve_name(notification_data['newOwnerCorpID']).name
+        try:
+            old_owner = eve_name.objects.get(eve_id=notification_data['oldOwnerCorpID']).name
+        except:
+            old_owner = _get_new_eve_name(notification_data['oldOwnerCorpID']).name
+
+        notification_list.append({"old_owner":old_owner,
+                                  "new_owner":new_owner,
+                                  "system":system_name,
+                                  "name": structure_name,
+                                  "type": structure_type,
+                                  })
+
+    context = {
+        'notifs': notification_list
+    }
+    return render(request, 'alliancetools/structure_txfr.html', context=context)

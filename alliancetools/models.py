@@ -222,6 +222,12 @@ class Asset(models.Model):
             models.Index(fields=['location_id'])
         )
 
+#class Asset_log(model.Model):
+#    corporation_id=models.ForeignKey(EveCorporationInfo, on_delete=models.SET_NULL)
+#    type_id=
+#    count=
+#    timestamp=
+
 
 class CorpAsset(Asset):
     corp = models.ForeignKey(EveCorporationInfo, on_delete=models.CASCADE, related_name='at_corp')

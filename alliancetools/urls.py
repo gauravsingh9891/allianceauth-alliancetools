@@ -9,6 +9,7 @@ urlpatterns = [
     url(r'^$', views.dashboard, name='dashboard'),
     url(r'^structures/$', views.structures, name='structures'),
     url(r'^pocos/$', views.pocos, name='pocos'),
+    url(r'^txfr/$', views.str_txfr, name='txfr'),
     url(r'^structure/(?P<structure_id>(\d)*)/$', views.structure, name='structure'),
     url(r'^addchar/$', views.alliancetools_add_char, name='add_char'),
     url(r'^addpoco/$', views.alliancetools_add_poco, name='add_poco'),
