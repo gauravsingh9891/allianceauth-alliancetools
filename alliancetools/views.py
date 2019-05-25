@@ -333,7 +333,7 @@ def audit_log(request, job_id=None):
 
 @login_required
 def str_txfr(request):
-    if request.user.has_perm('alliancetools.admin_alliance_tools'):
+    if request.user.has_perm('alliancetools.admin_alliance_tools') or request.user.has_perm('alliancetools.access_alliance_tools_structures_renter'):
         notifs = Notification.objects.filter(character__character__corporation_name__contains="Holding", notification_type='OwnershipTransferred', notification_text__contains="structureTypeID: 2233")
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
@@ -350,9 +350,6 @@ def str_txfr(request):
         # structureName: D4KU-5 - ducktales
         # structureTypeID: 35835
 
-        system_name = MapSolarSystem.objects.get(
-            solarSystemID=notification_data['solarSystemID']).solarSystemName
-        structure_type = TypeName.objects.get(type_id=notification_data['structureTypeID']).name
         structure_name = notification_data['structureName']
 
         new_owner = None
@@ -369,9 +366,7 @@ def str_txfr(request):
 
         notification_list.append({"old_owner":old_owner,
                                   "new_owner":new_owner,
-                                  "system":system_name,
                                   "name": structure_name,
-                                  "type": structure_type,
                                   "date": note.timestamp
                                   })
 

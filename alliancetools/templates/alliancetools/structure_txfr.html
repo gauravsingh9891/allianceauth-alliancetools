@@ -4,24 +4,21 @@
 {% load humanize %}
 {% load alliancetools_tags %}
 {% block at_block %}
+    <h1 class="text-center"> Poco Txfrs </h1>
     {% if notifs %}
         <div class="row ">
             <table id="table-structs" class="table table-hover dataTable">
                 <thead>
-                    <th class="text-center">To Corp</th>
                     <th class="text-center">From Corp</th>
-                    <th class="text-center">System</th>
-                    <th class="text-center">Type</th>
+                    <th class="text-center">To Corp</th>
                     <th class="text-center">Name</th>
                     <th class="text-center">Date</th>
                 </thead>
                 <tbody>
                 {% for notif in notifs %}
                 <tr>
-                    <td class="text-center">{{ notif.new_owner }}</td>
                     <td class="text-center">{{ notif.old_owner }}</td>
-                    <td class="text-center">{{ notif.system }}</td>
-                    <td class="text-center">{{ notif.type }}</td>
+                    <td class="text-center">{{ notif.new_owner }}</td>
                     <td class="text-center">{{ notif.name }}</td>
                     <td class="text-center">{{ notif.date|date:"Y-m-d" }}</td>
                 </tr>
@@ -46,9 +43,9 @@
         $('#table-structs').DataTable({
             "filterDropDown": {
 					columns: [{
-						idx: 1
-                            },{
 						idx: 0
+                            },{
+						idx: 1
                             }],
                     bootstrap: true
             },
