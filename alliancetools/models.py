@@ -275,6 +275,7 @@ class NotificationAlert(models.Model):
     structure_ping = models.BooleanField(default=True)
     entosis_ping = models.BooleanField(default=True)
     fuel_ping = models.BooleanField(default=False)  # not configured as yet
+    transfer_ping = models.BooleanField(default=False)
 
     def __str__(self):
         return "Notification Hook for: %s" % (self.corporation.corporation_name if self.corporation else "All")

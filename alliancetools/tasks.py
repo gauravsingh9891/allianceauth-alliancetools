@@ -717,7 +717,7 @@ def send_discord_pings():
         return ("%d Days, %d Hours, %d Min" % (td.days, round(hours), round(minutes)))
 
     def process_ping(_id, _title, _content, _fields, _timestamp, _catagory, _col, _img, _url, _footer):
-        custom_data = {'color': _col, 'title': _title, 'description': _content, 'timestamp': _timestamp.isoformat(),
+        custom_data = {'color': _col, 'title': _title, 'description': _content, 'timestamp': _timestamp.replace(tzinfo=None).isoformat(),
                        'fields': _fields}
         if _img:
             custom_data['image'] = {'url': _img}
@@ -740,6 +740,7 @@ def send_discord_pings():
     # notifications we care about.
     structure_pings = ['StructureLostShields', 'StructureLostArmor', 'StructureUnderAttack']
     entosis_ping = ['SovStructureReinforced', 'EntosisCaptureStarted']
+    transfer_ping = ['OwnershipTransferred']
 
     already_pinged = NotificationPing.objects.all().order_by('-time')[:5000].values_list('notification_id', flat=True)
     notifications = Notification.objects.filter(
@@ -926,7 +927,6 @@ def send_discord_pings():
                         body = "Entosis has started in %s on %s" % (system_name, structure_name)
                         timestamp = notification.timestamp
                         fields = [{'name': 'System', 'value': system_name, 'inline': True}]
-
                         ping = process_ping(notification.notification_id,
                                             title,
                                             body,
@@ -934,7 +934,8 @@ def send_discord_pings():
                                             timestamp,
                                             "entosis",
                                             11075584,
-                                            False,
+                                            ('https://imageserver.eveonline.com/Type/%s_64.png'
+                                             % str(notification_data['structureTypeID'])),
                                             ("http://evemaps.dotlan.net/system/%s" % system_name.replace(' ', '_')),
                                             False)
 
@@ -942,6 +943,76 @@ def send_discord_pings():
                             for hook in enotosis_hooks:
                                 embed_lists[hook.discord_webhook]['alert_ping'] = True
                                 embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                elif notification.notification_type in transfer_ping:
+                    transfer_hooks = discord_hooks.filter(transfer_ping=True)
+
+                    if notification.notification_type == "OwnershipTransferred":
+                        title = "Structure Transfered"
+                        notification_data = yaml.load(notification.notification_text)
+
+                        # charID: 972559932
+                        # newOwnerCorpID: 98514543
+                        # oldOwnerCorpID: 98465001
+                        # solarSystemID: 30004626
+                        # structureID: 1029829977992
+                        # structureName: D4KU-5 - ducktales
+                        # structureTypeID: 35835
+
+                        system_name = MapSolarSystem.objects.get(
+                            solarSystemID=notification_data['solarSystemID']).solarSystemName
+                        structure_type = TypeName.objects.get(type_id=notification_data['structureTypeID']).name
+                        structure_name = notification_data['structureName']
+                        if len(structure_name)<1:
+                            structure_name = "Unknown"
+
+                        new_owner = None
+                        old_owner = None
+                        originator = None
+
+                        try:
+                            originator = eve_name.objects.get(eve_id=notification_data['charID']).name
+                        except:
+                            originator = _get_new_eve_name(notification_data['charID']).name
+
+                        try:
+                            new_owner = eve_name.objects.get(eve_id=notification_data['newOwnerCorpID']).name
+                        except:
+                            new_owner = _get_new_eve_name(notification_data['newOwnerCorpID']).name
+
+                        try:
+                            old_owner = eve_name.objects.get(eve_id=notification_data['oldOwnerCorpID']).name
+                        except:
+                            old_owner = _get_new_eve_name(notification_data['oldOwnerCorpID']).name
+
+                        body = "Structure Transfered from %s to %s" % (old_owner, new_owner)
+                        timestamp = notification.timestamp
+                        corp_id = notification.character.character.corporation_id
+                        corp_ticker = notification.character.character.corporation_ticker
+                        footer = {"icon_url": "https://imageserver.eveonline.com/Corporation/%s_64.png" % (str(corp_id)),
+                                  "text": "%s (%s)" % (notification.character.character.corporation_name, corp_ticker)}
+
+                        fields = [{'name': 'Structure', 'value': structure_name, 'inline': True},
+                                  {'name': 'System', 'value': system_name, 'inline': True},
+                                  {'name': 'Type', 'value': structure_type, 'inline': True},
+                                  {'name': 'Originator', 'value': originator, 'inline': True}
+                                  ]
+
+                        ping = process_ping(notification.notification_id,
+                                            title,
+                                            body,
+                                            fields,
+                                            timestamp,
+                                            "transfer",
+                                            11075584,
+                                            False,
+                                            ("http://evemaps.dotlan.net/system/%s" % system_name.replace(' ', '_')),
+                                            footer)
+
+                    if ping:
+                        for hook in transfer_hooks:
+                            embed_lists[hook.discord_webhook]['alert_ping'] = True
+                            embed_lists[hook.discord_webhook]['embeds'].append(ping)
+
             except:
                 logging.exception("Messsage")
 
@@ -953,10 +1024,14 @@ def send_discord_pings():
                 alertText = "@everyone"  # or @here
             chunks = [data['embeds'][i:i + 5] for i in range(0, len(data['embeds']), 5)]
             for chunk in chunks:
-                r = requests.post(hook, headers=custom_headers,
+                try:
+                    r = requests.post(hook, headers=custom_headers,
                                   data=json.dumps({'content': alertText, 'embeds': chunk}))
-                r.raise_for_status()
-                time.sleep(1)
+                    r.raise_for_status()
+                    time.sleep(1)
+                except:
+                    logging.exception("DISCORD ERROR!")
+                    print(json.dumps({'content': alertText, 'embeds': chunk}), flush=True)
 
 
 @shared_task
