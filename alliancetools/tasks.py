@@ -964,17 +964,14 @@ def update_corp_pocos(character_id):
     logger.debug("Started pocos for: %s" % str(character_id))
 
     req_scopes = ['esi-planets.read_customs_offices.v1', 'esi-characters.read_corporation_roles.v1', 'esi-assets.read_corporation_assets.v1']
-    req_scopes_assets = ['esi-assets.read_corporation_assets.v1']
     req_roles = ['CEO', 'Director']
 
     token = _get_token(character_id, req_scopes)
-    token_assets = _get_token(character_id, req_scopes_assets)
 
     if not token:
         return "No Tokens"
 
     c = EsiResponseClient(token).get_esi_client(response=True)
-    ca = EsiResponseClient(token_assets).get_esi_client(response=True)
 
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
@@ -1010,7 +1007,7 @@ def update_corp_pocos(character_id):
         for structure in structures:
             office_ids.append(structure.get('office_id'))
 
-        locations, results = ca.Assets.post_corporations_corporation_id_assets_locations(corporation_id=_corporation.corporation_id,
+        locations, results = c.Assets.post_corporations_corporation_id_assets_locations(corporation_id=_corporation.corporation_id,
                                                                     item_ids=office_ids).result()
         offices = {}
         for location in locations:
