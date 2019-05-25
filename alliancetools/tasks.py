@@ -4,7 +4,7 @@ import os
 from celery import shared_task
 from .models import CorpAsset, ItemName, TypeName, Structure, Notification, CorporationWalletJournalEntry, \
     CorporationWalletDivision, AllianceToolCharacter, StructureService, BridgeOzoneLevel, MapSolarSystem, EveName, \
-    NotificationAlert, NotificationPing, Poco
+    NotificationAlert, NotificationPing, Poco, PocoCelestial
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Token
 from .esi_workaround import EsiResponseClient
@@ -963,15 +963,18 @@ def send_discord_pings():
 def update_corp_pocos(character_id):
     logger.debug("Started pocos for: %s" % str(character_id))
 
-    req_scopes = ['esi-planets.read_customs_offices.v1', 'esi-characters.read_corporation_roles.v1']
+    req_scopes = ['esi-planets.read_customs_offices.v1', 'esi-characters.read_corporation_roles.v1', 'esi-assets.read_corporation_assets.v1']
+    req_scopes_assets = ['esi-assets.read_corporation_assets.v1']
     req_roles = ['CEO', 'Director']
 
     token = _get_token(character_id, req_scopes)
+    token_assets = _get_token(character_id, req_scopes_assets)
 
     if not token:
         return "No Tokens"
 
     c = EsiResponseClient(token).get_esi_client(response=True)
+    ca = EsiResponseClient(token_assets).get_esi_client(response=True)
 
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
@@ -987,6 +990,8 @@ def update_corp_pocos(character_id):
     _character = AllianceToolCharacter.objects.get(character__character_id=character_id)
     _corporation = EveCorporationInfo.objects.get(corporation_id=_character.character.corporation_id)
 
+    Poco.objects.filter(corp=_corporation).delete()
+
     poco_bulk = []
     poco_pages = 1
     cache_expires = 0
@@ -1001,7 +1006,39 @@ def update_corp_pocos(character_id):
         cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(
             tzinfo=timezone.utc)
 
+        office_ids = []
         for structure in structures:
+            office_ids.append(structure.get('office_id'))
+
+        locations, results = ca.Assets.post_corporations_corporation_id_assets_locations(corporation_id=_corporation.corporation_id,
+                                                                    item_ids=office_ids).result()
+        offices = {}
+        for location in locations:
+            offices[location.get('item_id')] = location
+
+        #print(offices, flush=True)
+        for structure in structures:
+            celestial = PocoCelestial.objects.filter(office_id=structure.get('office_id'))
+            if not celestial.exists():
+                url = "https://www.fuzzwork.co.uk/api/nearestCelestial.php?x=%s&y=%s&z=%s&solarsystemid=%s" \
+                      % ((str(offices.get(structure.get('office_id'))['position'].get('x'))),
+                         (str(offices.get(structure.get('office_id'))['position'].get('y'))),
+                         (str(offices.get(structure.get('office_id'))['position'].get('z'))),
+                         (str(structure.get('system_id')))
+                         )
+                logger.debug(url)
+                r = requests.get(url)
+                fuzz_result = r.json()
+
+                celestial = PocoCelestial.objects.create(
+                    office_id=structure.get('office_id'),
+                    celestial_name=fuzz_result.get('itemName')
+                )
+            else:
+                celestial = celestial[0]
+                logger.debug(celestial.celestial_name)
+
+
             structure_ob = Poco(corp=_corporation,
                                 office_id=structure.get('office_id'),
                                 system_id=structure.get('system_id'),
@@ -1015,8 +1052,10 @@ def update_corp_pocos(character_id):
                                 alliance_tax_rate=structure.get('alliance_tax_rate'),
                                 reinforce_exit_start=structure.get('reinforce_exit_start'),
                                 reinforce_exit_end=structure.get('reinforce_exit_end'),
-                                allow_alliance_access= structure.get('allow_alliance_access'),
-                                allow_access_with_standings= structure.get('allow_access_with_standings')
+                                allow_alliance_access=structure.get('allow_alliance_access'),
+                                allow_access_with_standings=structure.get('allow_access_with_standings'),
+                                solar_system=MapSolarSystem.objects.get(solarSystemID=structure.get('system_id')),
+                                closest_celestial=celestial
                                 )
 
             poco_bulk.append(structure_ob)
@@ -1030,3 +1069,5 @@ def update_corp_pocos(character_id):
         last_update_pocos=datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
 
     return "Finished Pocos for: %s" % (str(character_id))
+
+    # https://www.fuzzwork.co.uk/api/nearestCelestial.php?x=660502472160&y=-130687672800&z=-813545103840&solarsystemid=30002682

@@ -29,7 +29,8 @@ CORP_REQUIRED_SCOPES = ['esi-characters.read_notifications.v1',
 
 
 POCO_REQUIRED_SCOPES = ['esi-planets.read_customs_offices.v1',
-                        'esi-characters.read_corporation_roles.v1']
+                        'esi-characters.read_corporation_roles.v1',
+                        'esi-assets.read_corporation_assets.v1']
 
 
 STRUCTURES_REQUIRED_SCOPES = ['esi-corporations.read_structures.v1',
@@ -162,9 +163,9 @@ def structures(request):
 @login_required
 def pocos(request):
     if request.user.has_perm('alliancetools.access_alliance_tools_structures'):
-        structures = Poco.objects.all()
+        structures = Poco.objects.select_related('solar_system', 'closest_celestial').all()
     elif request.user.has_perm('alliancetools.access_alliance_tools_structures_renter'):
-        structures = Poco.objects.all()
+        structures = Poco.objects.select_related('solar_system', 'closest_celestial').all()
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
 

@@ -307,12 +307,20 @@ class GroupReqWebhook(models.Model):
         return "Group Hook for: %s" % self.group.name
 
 
+class PocoCelestial(models.Model):
+    office_id = models.BigIntegerField()
+    celestial_name = models.CharField(max_length=500, null=True, default=None)
+
+
 class Poco(models.Model):
     corp = models.ForeignKey(EveCorporationInfo, on_delete=models.CASCADE)
 
     office_id = models.BigIntegerField()
 
     system_id = models.IntegerField()
+
+    solar_system = models.ForeignKey(MapSolarSystem, on_delete=models.SET_NULL, null=True, default=None, related_name='solar_system')
+    closest_celestial = models.ForeignKey(PocoCelestial, on_delete=models.SET_NULL, null=True, default=None)
 
     name = models.CharField(max_length=100, null=True, default=None)
 
@@ -333,3 +341,6 @@ class Poco(models.Model):
 
     allow_alliance_access = models.BooleanField()
     allow_access_with_standings = models.BooleanField()
+
+
+
