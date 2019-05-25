@@ -372,6 +372,7 @@ def str_txfr(request):
                                   "system":system_name,
                                   "name": structure_name,
                                   "type": structure_type,
+                                  "date": note.timestamp
                                   })
 
     context = {

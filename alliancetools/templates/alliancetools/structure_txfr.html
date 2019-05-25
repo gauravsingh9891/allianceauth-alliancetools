@@ -13,6 +13,7 @@
                     <th class="text-center">System</th>
                     <th class="text-center">Type</th>
                     <th class="text-center">Name</th>
+                    <th class="text-center">Date</th>
                 </thead>
                 <tbody>
                 {% for notif in notifs %}
@@ -22,6 +23,7 @@
                     <td class="text-center">{{ notif.system }}</td>
                     <td class="text-center">{{ notif.type }}</td>
                     <td class="text-center">{{ notif.name }}</td>
+                    <td class="text-center">{{ notif.date|date:"Y-m-d" }}</td>
                 </tr>
                 {% empty %}
 
