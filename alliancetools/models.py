@@ -222,11 +222,15 @@ class Asset(models.Model):
             models.Index(fields=['location_id'])
         )
 
-#class Asset_log(model.Model):
-#    corporation_id=models.ForeignKey(EveCorporationInfo, on_delete=models.SET_NULL)
-#    type_id=
-#    count=
-#    timestamp=
+class AssetLog(models.Model):
+    corporation_id=models.ForeignKey(EveCorporationInfo, on_delete=models.SET_NULL)
+    type_name = models.CharField(max_length=500)
+    count = models.IntegerField()
+    timestamp = models.DateTimeField(auto_now=True)
+
+class AssetLogConfig(models.Model):
+    corporation_id=models.ForeignKey(EveCorporationInfo, on_delete=models.SET_NULL)
+    types = models.CharField(max_length=500) #coma delimited type_id's
 
 
 class CorpAsset(Asset):

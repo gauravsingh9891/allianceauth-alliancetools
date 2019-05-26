@@ -356,13 +356,19 @@ def str_txfr(request):
         old_owner = None
 
         try:
-            new_owner = eve_name.objects.get(eve_id=notification_data['newOwnerCorpID']).name
+            new_owner = EveName.objects.get(eve_id=notification_data['newOwnerCorpID']).name
         except:
-            new_owner = _get_new_eve_name(notification_data['newOwnerCorpID']).name
+            logging.exception("Messsage")
+            name_ob = _get_new_eve_name(notification_data['newOwnerCorpID'])
+            new_owner = name_ob.name
+            name_ob.save()
         try:
-            old_owner = eve_name.objects.get(eve_id=notification_data['oldOwnerCorpID']).name
+            old_owner = EveName.objects.get(eve_id=notification_data['oldOwnerCorpID']).name
         except:
-            old_owner = _get_new_eve_name(notification_data['oldOwnerCorpID']).name
+            logging.exception("Messsage")
+            name_ob = _get_new_eve_name(notification_data['oldOwnerCorpID'])
+            old_owner = name_ob.name
+            name_ob.save()
 
         notification_list.append({"old_owner":old_owner,
                                   "new_owner":new_owner,
