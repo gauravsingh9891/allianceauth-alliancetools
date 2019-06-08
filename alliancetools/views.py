@@ -164,7 +164,7 @@ def structures(request):
 
 @login_required
 def pocos(request):
-    if request.user.has_perm('alliancetools.access_alliance_tools_structures'):
+    if request.user.has_perm('alliancetools.admin_alliance_tools'):
         structures = Poco.objects.select_related('solar_system', 'closest_celestial').all()
     elif request.user.has_perm('alliancetools.access_alliance_tools_structures_renter'):
         structures = Poco.objects.select_related('solar_system', 'closest_celestial').all()

@@ -29,6 +29,32 @@ class StructureMenu(MenuItemHook):
         return ''
 
 
+class PocoMenu(MenuItemHook):
+    def __init__(self):
+        MenuItemHook.__init__(self, 'Customs Offices',
+                              'fa fa-globe fa-fw',
+                              'alliancetools:pocos',
+                              navactive=['alliancetools:pocos'])
+
+    def render(self, request):
+        if request.user.has_perm('alliancetools.admin_alliance_tools') or request.user.has_perm('alliancetools.access_alliance_tools_structures_renter'):
+            return MenuItemHook.render(self, request)
+        return ''
+
+
+class TxfrMenu(MenuItemHook):
+    def __init__(self):
+        MenuItemHook.__init__(self, 'Structure Txfrs',
+                              'fa fa-exchange fa-fw',
+                              'alliancetools:txfr',
+                              navactive=['alliancetools:txfr'])
+
+    def render(self, request):
+        if request.user.has_perm('alliancetools.admin_alliance_tools') or request.user.has_perm('alliancetools.access_alliance_tools_structures_renter'):
+            return MenuItemHook.render(self, request)
+        return ''
+
+
 class JobsMenu(MenuItemHook):
     def __init__(self):
         MenuItemHook.__init__(self, 'Job Board',
@@ -46,11 +72,17 @@ class JobsMenu(MenuItemHook):
 def register_menu():
     return AllianceMenu()
 
-
 @hooks.register('menu_item_hook')
 def register_menu():
     return StructureMenu()
 
+@hooks.register('menu_item_hook')
+def register_menu():
+    return TxfrMenu()
+
+@hooks.register('menu_item_hook')
+def register_menu():
+    return PocoMenu()
 
 @hooks.register('menu_item_hook')
 def register_menu():

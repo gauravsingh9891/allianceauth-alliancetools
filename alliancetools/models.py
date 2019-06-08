@@ -230,7 +230,7 @@ class AssetLog(models.Model):
 
 class AssetLogConfig(models.Model):
     corporation_id=models.ForeignKey(EveCorporationInfo, on_delete=models.SET_NULL)
-    types = models.CharField(max_length=500) #coma delimited type_id's
+    types = models.CharField(max_length=500) #coma delimited type_id's?
 
 
 class CorpAsset(Asset):
@@ -247,6 +247,15 @@ class BridgeOzoneLevel(models.Model):
     station_id = models.CharField(max_length=500)
     quantity = models.BigIntegerField()
     used = models.BigIntegerField(default=0)
+    date = models.DateTimeField(auto_now=True)
+
+
+# Analytic Models *****************************************************************************************************
+class AssetAudit(models.Model):
+    id = models.AutoField(primary_key=True)
+    corp = models.ForeignKey(EveCorporationInfo, on_delete=models.SET_NULL, null=True, default=None)
+    type_id = models.BigIntegerField()
+    count = models.BigIntegerField(default=0)
     date = models.DateTimeField(auto_now=True)
 
 

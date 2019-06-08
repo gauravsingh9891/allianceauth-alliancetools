@@ -796,7 +796,12 @@ def send_discord_pings(self):
                                             footer)
                         if ping:
                             for hook in attack_hooks:
-                                embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                                if hook.corporation is None:
+                                    embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                                elif hook.corporation.corporation_id == notification.character.character.corporation_id:
+                                    embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                                else:
+                                    pass #ignore
 
                     elif notification.notification_type == 'StructureLostArmor':
                         body = "Structure has lost its Armor"
@@ -838,7 +843,13 @@ def send_discord_pings(self):
                                             footer)
                         if ping:
                             for hook in attack_hooks:
-                                embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                                if hook.corporation is None:
+                                    embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                                elif hook.corporation.corporation_id == notification.character.character.corporation_id:
+                                    embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                                else:
+                                    pass  # ignore
+
 
                     elif notification.notification_type == 'StructureUnderAttack':
                         body = "Structure under Attack!"
@@ -855,7 +866,15 @@ def send_discord_pings(self):
                         footer = {"icon_url": "https://imageserver.eveonline.com/Corporation/%s_64.png" % (str(corp_id)),
                                   "text": "%s (%s)" % (notification.character.character.corporation_name, corp_ticker)}
 
-                        attackerStr = "[%s](https://zkillboard.com/search/%s/), **[%s](https://zkillboard.com/search/%s/)**" % (notification_data.get('corpName', ""),
+                        attacking_char = ""
+
+                        try:
+                            attacking_char = eve_name.objects.get(eve_id=notification_data['charID']).name
+                        except:
+                            attacking_char = _get_new_eve_name(notification_data['charID']).name
+
+                        attackerStr = "*[%s](https://zkillboard.com/search/%s/)*, [%s](https://zkillboard.com/search/%s/), **[%s](https://zkillboard.com/search/%s/)**" % (attacking_char, attacking_char,
+                                                                                                                                                                           notification_data.get('corpName', ""),
                                                                   notification_data.get('corpName', "").replace(" ", "%20"),
                                                                   notification_data.get('allianceName', "*-*"),
                                                                   notification_data.get('allianceName', "").replace(" ", "%20"))
@@ -877,11 +896,17 @@ def send_discord_pings(self):
                                             footer)
                         if ping:
                             for hook in attack_hooks:
-                                embed_lists[hook.discord_webhook]['alert_ping'] = True
-                                embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                                if hook.corporation is None:
+                                    embed_lists[hook.discord_webhook]['alert_ping'] = True
+                                    embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                                elif hook.corporation.corporation_id == notification.character.character.corporation_id:
+                                    embed_lists[hook.discord_webhook]['alert_ping'] = True
+                                    embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                                else:
+                                    pass #ignore
 
                 elif notification.notification_type in entosis_ping:
-                    enotosis_hooks = discord_hooks.filter(structure_ping=True)
+                    enotosis_hooks = discord_hooks.filter(entosis_ping=True)
 
                     if notification.notification_type == "SovStructureReinforced":
                         title = "Entosis notification"
@@ -916,7 +941,12 @@ def send_discord_pings(self):
 
                         if ping:
                             for hook in enotosis_hooks:
-                                embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                                if hook.corporation is None:
+                                    embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                                elif hook.corporation.corporation_id == notification.character.character.corporation_id:
+                                    embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                                else:
+                                    pass #ignore
 
                     elif notification.notification_type == "EntosisCaptureStarted":
                         title = "Entosis notification"
@@ -941,8 +971,15 @@ def send_discord_pings(self):
 
                         if ping:
                             for hook in enotosis_hooks:
-                                embed_lists[hook.discord_webhook]['alert_ping'] = True
-                                embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                                if hook.corporation is None:
+                                    embed_lists[hook.discord_webhook]['alert_ping'] = True
+                                    embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                                elif hook.corporation.corporation_id == notification.character.character.corporation_id:
+                                    embed_lists[hook.discord_webhook]['alert_ping'] = True
+                                    embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                                else:
+                                    pass #ignore
+
                 elif notification.notification_type in transfer_ping:
                     transfer_hooks = discord_hooks.filter(transfer_ping=True)
 
@@ -1008,10 +1045,14 @@ def send_discord_pings(self):
                                             ("http://evemaps.dotlan.net/system/%s" % system_name.replace(' ', '_')),
                                             footer)
 
-                    if ping:
-                        for hook in transfer_hooks:
-                            embed_lists[hook.discord_webhook]['alert_ping'] = False
-                            embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                        if ping:
+                            for hook in transfer_hooks:
+                                if hook.corporation is None:
+                                    embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                                elif hook.corporation.corporation_id == notification.character.character.corporation_id:
+                                    embed_lists[hook.discord_webhook]['embeds'].append(ping)
+                                else:
+                                    pass  # ignore
 
             except:
                 logging.exception("Messsage")
