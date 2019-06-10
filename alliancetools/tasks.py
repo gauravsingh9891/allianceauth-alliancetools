@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.db import transaction
 from allianceauth.services.tasks import QueueOnce
 from django.db.models import Sum
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 import bz2
 import re
@@ -894,6 +895,17 @@ def send_discord_pings(self):
                                                 % structure.type_id),
                                             ('http://evemaps.dotlan.net/system/%s' % system_name.replace(' ', '_')),
                                             footer)
+
+                        if ping:
+                            try:
+                                if ItemName.objects.get(item_id=notification_data['charID']).exists():
+                                    ping=False  # We are an NPC
+                            except ObjectDoesNotExist:
+                                pass
+                            except MultipleObjectsReturned:
+                                logger.debug("WTF Broken items table!")
+                                pass  # do i care? shits fucked anyway!
+
                         if ping:
                             for hook in attack_hooks:
                                 if hook.corporation is None:
