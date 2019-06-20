@@ -149,6 +149,18 @@ class Notification(models.Model):
 
 
 # Structure models **************************************************************************************************
+class AssetLocation(models.Model):
+    location_id = models.BigIntegerField(unique=True)
+    system_id = models.IntegerField(null=True, default=None)
+    type_id = models.IntegerField(null=True, default=None)
+
+    #extra
+    name = models.CharField(max_length=150)
+    system_name = models.ForeignKey(MapSolarSystem, on_delete=models.SET_NULL, null=True, default=None)
+    type_name = models.ForeignKey(TypeName, on_delete=models.SET_NULL, null=True, default=None)
+
+
+# Structure models **************************************************************************************************
 class Structure(models.Model):
     corporation = models.ForeignKey(EveCorporationInfo, on_delete=models.CASCADE, related_name='at_structure')
 
@@ -170,7 +182,7 @@ class Structure(models.Model):
     unanchors_at = models.DateTimeField(null=True, default=None)
 
     #extra
-    name = models.CharField(max_length=150, choices=_state_enum)
+    name = models.CharField(max_length=150)
     system_name = models.ForeignKey(MapSolarSystem, on_delete=models.SET_NULL, null=True, default=None)
     type_name = models.ForeignKey(TypeName, on_delete=models.SET_NULL, null=True, default=None)
 
@@ -223,13 +235,13 @@ class Asset(models.Model):
         )
 
 class AssetLog(models.Model):
-    corporation_id=models.ForeignKey(EveCorporationInfo, on_delete=models.SET_NULL)
+    corporation=models.ForeignKey(EveCorporationInfo, on_delete=models.SET_NULL, null=True, default=None)
     type_name = models.CharField(max_length=500)
     count = models.IntegerField()
     timestamp = models.DateTimeField(auto_now=True)
 
 class AssetLogConfig(models.Model):
-    corporation_id=models.ForeignKey(EveCorporationInfo, on_delete=models.SET_NULL)
+    corporation_id=models.ForeignKey(EveCorporationInfo, on_delete=models.SET_NULL, null=True, default=None)
     types = models.CharField(max_length=500) #coma delimited type_id's?
 
 
@@ -247,15 +259,6 @@ class BridgeOzoneLevel(models.Model):
     station_id = models.CharField(max_length=500)
     quantity = models.BigIntegerField()
     used = models.BigIntegerField(default=0)
-    date = models.DateTimeField(auto_now=True)
-
-
-# Analytic Models *****************************************************************************************************
-class AssetAudit(models.Model):
-    id = models.AutoField(primary_key=True)
-    corp = models.ForeignKey(EveCorporationInfo, on_delete=models.SET_NULL, null=True, default=None)
-    type_id = models.BigIntegerField()
-    count = models.BigIntegerField(default=0)
     date = models.DateTimeField(auto_now=True)
 
 

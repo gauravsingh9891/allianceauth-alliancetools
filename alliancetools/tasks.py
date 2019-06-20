@@ -4,7 +4,7 @@ import os
 from celery import shared_task
 from .models import CorpAsset, ItemName, TypeName, Structure, Notification, CorporationWalletJournalEntry, \
     CorporationWalletDivision, AllianceToolCharacter, StructureService, BridgeOzoneLevel, MapSolarSystem, EveName, \
-    NotificationAlert, NotificationPing, Poco, PocoCelestial
+    NotificationAlert, NotificationPing, Poco, PocoCelestial, AssetLocation
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Token
 from .esi_workaround import EsiResponseClient
@@ -197,6 +197,7 @@ def update_corp_assets(character_id):
         next_update_assets=cache_expires,
         last_update_assets=datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
 
+    run_asset_locations.delay(character_id)
     return "Finished assets for: %s" % (str(character_id))
 
 
@@ -697,6 +698,119 @@ def run_ozone_levels(self, character_id):
         except:
             pass  # dont fail for now
     return "Finished Ozone for: %s" % (str(character_id))
+
+
+@shared_task(bind=True, base=QueueOnce)
+def run_asset_locations(self, character_id):
+    logger.debug("Started asset locations")
+
+    _character = AllianceToolCharacter.objects.get(character__character_id=character_id)
+    _corporation = EveCorporationInfo.objects.get(corporation_id=_character.character.corporation_id)
+
+
+    _structures =  list(Structure.objects.all().values_list('structure_id', flat=True))
+    _systems =  list(MapSolarSystem.objects.all().values_list('solarSystemID', flat=True))
+    _npc =  list(ItemName.objects.all().values_list('item_id', flat=True))
+    _locations = list(AssetLocation.objects.all().values_list('location_id', flat=True))
+
+    structure_type_ids = [35833,47516,47512, 47513, 47514, 47515  # forts
+                    ,35832  # astra
+                    ,35834  # keep
+                    ,35827  # soyito
+                    ,35826  # azbel
+                    ,35825  # riat
+                    ,35835  # ath
+                    ,35836  # tat
+                    ,27  # generic office asset
+                   ]
+
+    top_level_assets = list(CorpAsset.objects.all()\
+                            .exclude(item_id__in=_structures)\
+                            .values_list('item_id', flat=True))
+
+    to_fetch_locations = CorpAsset.objects.all()\
+                            .exclude(location_id__in=top_level_assets)\
+                            .select_related()
+
+    completed_locations = []
+    for loc in to_fetch_locations:
+        if loc.location_id in _systems:
+            # logger.debug("Solar System! id: %s loc: %s type: %s type: %s" %(str(loc.item_id), str(loc.location_id), str(loc.type_id), loc.location_flag))
+            # Solar system details from DB no need to update
+            if loc.location_id not in completed_locations and loc.location_id not in _locations:
+                system = MapSolarSystem.objects.get(solarSystemID=loc.location_id)
+                AssetLocation.objects.create(location_id=loc.location_id,
+                                             system_id=loc.location_id,
+                                             name = system.solarSystemName,
+                                             system_name = system)
+                completed_locations.append(loc.location_id)
+        elif loc.location_id in _npc:
+            # logger.debug("NPC! id: %s loc: %s type: %s type: %s" % (str(loc.item_id), str(loc.location_id), str(loc.type_id), loc.location_flag))
+            # NPC station, lookup the system on the station API no need to update
+            if loc.location_id not in completed_locations and loc.location_id not in _locations:
+                try:
+                    custom_headers = {'Content-Type': 'application/json'}
+                    r = requests.get("https://esi.evetech.net/latest/universe/stations/%s/?datasource=tranquility" % str(loc.location_id),
+                                      headers=custom_headers)
+                    r.raise_for_status()
+                    result = r.json()
+                    name = result['name']
+                    type_id = result['type_id']
+                    system_id = result['system_id']
+
+                    AssetLocation.objects.update_or_create(location_id=loc.location_id,
+                                                           defaults={'name': name,
+                                                                     'system_id': system_id,
+                                                                     'system_name_id': system_id,
+                                                                     'type_name_id': type_id,
+                                                                     'type_id': type_id})
+                    completed_locations.append(loc.location_id)
+                except:
+                    logging.exception("shits broke")
+
+        elif loc.location_id in _structures:
+            # logger.debug("In  DB! id: %s loc: %s type: %s type: %s" %(str(loc.item_id), str(loc.location_id), str(loc.type_id), loc.location_flag))
+            if loc.location_id not in completed_locations:
+                structure = Structure.objects.get(structure_id=loc.location_id)
+                AssetLocation.objects.update_or_create(location_id=loc.location_id,
+                                                       defaults={'name': structure.name,
+                                                                 'system_id': structure.system_id,
+                                                                 'system_name': structure.system_name,
+                                                                 'type_name': structure.type_name,
+                                                                 'type_id': structure.type_id})
+                completed_locations.append(loc.location_id)
+        elif loc.type_id in structure_type_ids or (loc.location_flag == "CorpDeliveries" and loc.location_type == "other"):
+            # logger.debug("Goto API : %s loc: %s type: %s type: %s" %(str(loc.item_id), str(loc.location_id), str(loc.type_id), loc.location_flag))
+            # lookup structure on API, its a structure not in our DB update regardless
+            if loc.location_id not in completed_locations:
+                try:
+                    req_scopes = ['esi-universe.read_structures.v1']
+                    _character = AllianceToolCharacter.objects.filter(character__corporation_id=loc.corp.corporation_id)[0]
+                    token = Token.objects.filter(character_id=_character.character.character_id).require_scopes(req_scopes)[0]
+
+                    if not token:
+                        return "No Tokens"
+
+                    c = EsiResponseClient(token).get_esi_client(response=True)
+
+                    structure_info, result = c.Universe.get_universe_structures_structure_id(
+                        structure_id=loc.location_id).result()
+
+                    AssetLocation.objects.update_or_create(location_id=loc.location_id,
+                                                           defaults={'name': structure_info.get('name', None),
+                                                                     'system_id': structure_info.get('system_id', None),
+                                                                     'system_name_id': structure_info.get('system_id', None),
+                                                                     'type_name_id': structure_info.get('type_id', None),
+                                                                     'type_id': structure_info.get('type_id', None)})
+                    completed_locations.append(loc.location_id)
+                except:
+                    logging.exception("shits broke")
+
+        else:
+            logger.warning("Junk! Junk! id: %s loc: %s type: %s type: %s" %(str(loc.item_id), str(loc.location_id), str(loc.type_id), loc.location_flag))
+            # this should never happen? shits fucked
+
+    return "Finished asset locations for"
 
 
 @shared_task(bind=True, base=QueueOnce)
