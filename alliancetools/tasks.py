@@ -197,7 +197,7 @@ def update_corp_assets(character_id):
         next_update_assets=cache_expires,
         last_update_assets=datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
 
-    run_asset_locations.delay(character_id)
+    #run_asset_locations.delay(character_id)
     return "Finished assets for: %s" % (str(character_id))
 
 
