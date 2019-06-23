@@ -117,6 +117,7 @@
 
                     // Update footer by showing the total with the reference of the column index
                 $( api.column( 2 ).footer() ).html(pageTotal);
+$( api.column( 2 ).header() ).html("Fuel Use <span class=\"label label-primary\">Total: " + pageTotal + "</span>");
             }
         });
     });
