@@ -48,9 +48,22 @@
                     <th class="text-center">{{ structure.structure.type_name.name }}</th>
 
                 </tr>
+
                 {% empty %}
 
                 {% endfor %}
+                <tfoot>
+                    <th class="text-center"></th>
+                    <th class="text-center">Totals Visible:</th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                </tfoot>
+
                 </tbody>
             </table>
         </div>
@@ -90,7 +103,21 @@
             "order": [
                 [1, "desc"]
             ],
-            "pageLength": 25
+            "pageLength": 25,
+            "footerCallback": function ( row, data, start, end, display ) {
+                var api = this.api(), data;
+
+                var pageTotal = api
+                    .column( 2, { page: 'current'} )
+                    .data()
+                    .reduce( function (a, b) {
+                        return Number(a) + Number(b);
+                    }, 0 );
+
+
+                    // Update footer by showing the total with the reference of the column index
+                $( api.column( 2 ).footer() ).html(pageTotal);
+            }
         });
     });
 {% endblock %}
