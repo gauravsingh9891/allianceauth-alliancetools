@@ -158,6 +158,7 @@ class AssetLocation(models.Model):
     name = models.CharField(max_length=150)
     system_name = models.ForeignKey(MapSolarSystem, on_delete=models.SET_NULL, null=True, default=None)
     type_name = models.ForeignKey(TypeName, on_delete=models.SET_NULL, null=True, default=None)
+    timestamp = models.DateTimeField(auto_now=True)
 
 
 # Structure models **************************************************************************************************

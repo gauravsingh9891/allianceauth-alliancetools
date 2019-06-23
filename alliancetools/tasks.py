@@ -701,12 +701,8 @@ def run_ozone_levels(self, character_id):
 
 
 @shared_task(bind=True, base=QueueOnce)
-def run_asset_locations(self, character_id):
+def run_asset_locations(self):
     logger.debug("Started asset locations")
-
-    _character = AllianceToolCharacter.objects.get(character__character_id=character_id)
-    _corporation = EveCorporationInfo.objects.get(corporation_id=_character.character.corporation_id)
-
 
     _structures =  list(Structure.objects.all().values_list('structure_id', flat=True))
     _systems =  list(MapSolarSystem.objects.all().values_list('solarSystemID', flat=True))
@@ -744,6 +740,7 @@ def run_asset_locations(self, character_id):
                                              name = system.solarSystemName,
                                              system_name = system)
                 completed_locations.append(loc.location_id)
+
         elif loc.location_id in _npc:
             # logger.debug("NPC! id: %s loc: %s type: %s type: %s" % (str(loc.item_id), str(loc.location_id), str(loc.type_id), loc.location_flag))
             # NPC station, lookup the system on the station API no need to update
@@ -779,27 +776,28 @@ def run_asset_locations(self, character_id):
                                                                  'type_name': structure.type_name,
                                                                  'type_id': structure.type_id})
                 completed_locations.append(loc.location_id)
-        elif loc.type_id in structure_type_ids or (loc.location_flag == "CorpDeliveries" and loc.location_type == "other"):
+
+        elif loc.type_id in structure_type_ids:
             # logger.debug("Goto API : %s loc: %s type: %s type: %s" %(str(loc.item_id), str(loc.location_id), str(loc.type_id), loc.location_flag))
             # lookup structure on API, its a structure not in our DB update regardless
             if loc.location_id not in completed_locations:
                 try:
-                    req_scopes = ['esi-universe.read_structures.v1']
+                    req_scopes = ['esi-universe.read_structures.v1']  # whos is it?
                     _character = AllianceToolCharacter.objects.filter(character__corporation_id=loc.corp.corporation_id)[0]
                     token = Token.objects.filter(character_id=_character.character.character_id).require_scopes(req_scopes)[0]
 
                     if not token:
                         return "No Tokens"
 
-                    c = EsiResponseClient(token).get_esi_client(response=True)
+                    c = EsiResponseClient(token).get_esi_client(response=True) # lookup the structure
 
                     structure_info, result = c.Universe.get_universe_structures_structure_id(
                         structure_id=loc.location_id).result()
 
                     AssetLocation.objects.update_or_create(location_id=loc.location_id,
                                                            defaults={'name': structure_info.get('name', None),
-                                                                     'system_id': structure_info.get('system_id', None),
-                                                                     'system_name_id': structure_info.get('system_id', None),
+                                                                     'system_id': structure_info.get('solar_system_id', None),
+                                                                     'system_name_id': structure_info.get('solar_system_id', None),
                                                                      'type_name_id': structure_info.get('type_id', None),
                                                                      'type_id': structure_info.get('type_id', None)})
                     completed_locations.append(loc.location_id)
@@ -988,8 +986,10 @@ def send_discord_pings(self):
                         except:
                             attacking_char = _get_new_eve_name(notification_data['charID']).name
 
-                        attackerStr = "*[%s](https://zkillboard.com/search/%s/)*, [%s](https://zkillboard.com/search/%s/), **[%s](https://zkillboard.com/search/%s/)**" % (attacking_char, attacking_char,
-                                                                                                                                                                           notification_data.get('corpName', ""),
+                        attackerStr = "*[%s](https://zkillboard.com/search/%s/)*, [%s](https://zkillboard.com/search/%s/), **[%s](https://zkillboard.com/search/%s/)**" % \
+                                                                 (attacking_char,
+                                                                  attacking_char.replace(" ", "%20"),
+                                                                  notification_data.get('corpName', ""),
                                                                   notification_data.get('corpName', "").replace(" ", "%20"),
                                                                   notification_data.get('allianceName', "*-*"),
                                                                   notification_data.get('allianceName', "").replace(" ", "%20"))
