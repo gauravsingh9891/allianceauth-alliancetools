@@ -400,6 +400,8 @@ def fuel_levels(request):
         'Invention' : [12, 9, 12, 12],
         'Manufacturing (Standard)' : [12, 9, 12, 12],
         'Blueprint Copying' : [12, 9, 12, 12],
+        'Material Efficiency Research' : [0, 0, 0, 0], # part of above
+        'Time Efficiency Research' : [0, 0, 0, 0], # part of above
         'Manufacturing (Super Capitals)' : [36, 27, 36, 36],
         'Composite Reactions' : [15, 15, 12, 15],
         'Hybrid Reactions': [15, 15, 12, 15],
