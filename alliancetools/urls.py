@@ -8,6 +8,7 @@ app_name = 'alliancetools'
 urlpatterns = [
     url(r'^$', views.dashboard, name='dashboard'),
     url(r'^structures/$', views.structures, name='structures'),
+    url(r'^fuel/$', views.fuel_levels, name='fuel'),
     url(r'^pocos/$', views.pocos, name='pocos'),
     url(r'^txfr/$', views.str_txfr, name='txfr'),
     url(r'^structure/(?P<structure_id>(\d)*)/$', views.structure, name='structure'),

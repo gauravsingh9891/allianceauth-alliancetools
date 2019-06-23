@@ -380,3 +380,82 @@ def str_txfr(request):
         'notifs': notification_list
     }
     return render(request, 'alliancetools/structure_txfr.html', context=context)
+
+
+@login_required
+def fuel_levels(request):
+    structures = False
+
+    init_id = 1900696668
+    ia_id = 1911932230
+    ignore_suffix = '*'  #init
+    include_suffix = '#'  #IA
+
+    # hourly fuel reqs [ cit, eng, ref, flex ]
+    citadel_service_mods = {
+        'Clone Bay' : [8, 10, 10, 10],
+        'Market' : [30, 40, 40, 40],
+        'Manufacturing (Capitals)' : [24, 18, 24, 24],
+        'Standup Hyasyoda Research Lab' : [10, 8, 10, 10],  ## how to detect this
+        'Invention' : [12, 9, 12, 12],
+        'Manufacturing (Standard)' : [12, 9, 12, 12],
+        'Blueprint Copying' : [12, 9, 12, 12],
+        'Manufacturing (Super Capitals)' : [36, 27, 36, 36],
+        'Composite Reactions' : [15, 15, 12, 15],
+        'Hybrid Reactions': [15, 15, 12, 15],
+        'Moon Drilling': [5, 5, 4, 5],
+        'Biochemical Reactions': [15, 15, 12, 15],
+        'Reprocessing': [10, 10, 8, 10],
+        'Jump Access': [9999, 9999, 9999, 15],  # large to show errors
+        'Standup Cynosural System Jammer I': [9999, 9999, 9999, 40],   ### dont know the name of the service state
+        'Jump Gate Access': [9999, 9999, 9999, 30]
+    }
+
+    cit = [35833,47516,47512, 47513, 47514, 47515, 35832, 35834]
+    eng = [35827, 35826, 35825]
+    ref = [35835, 35836]
+    fle = [37534, 35841, 35840]
+
+    if not (request.user.has_perm('alliancetools.corp_level_alliance_tools') or
+            request.user.has_perm('alliancetools.access_alliance_tools_structures_renter') or
+            request.user.has_perm('alliancetools.access_alliance_tools_structures')):
+        raise PermissionDenied('You do not have permission to be here. This has been Logged!')
+
+    init_structures = Structure.objects.select_related('corporation', 'system_name', 'type_name').all().prefetch_related('structureservice_set')
+        #.filter(corporation__corporation_id=init_id).prefetch_related('structureservice_set')
+        #.exclude(name__endswith=ignore_suffix)\
+
+    renter_structures = Structure.objects.select_related('corporation', 'system_name', 'type_name').all().prefetch_related('structureservice_set')
+        #.filter(corporation__corporation_id=ia_id).prefetch_related('structureservice_set')
+                #name__endswith=include_suffix)\
+
+
+    structure_tree = []
+    all_structures = init_structures | renter_structures
+    total_hourly_fuel = 0
+    for s in all_structures:
+        structure_hourly_fuel = 0
+        structure_type = -1
+
+        if s.type_id in cit:
+            structure_type = 0
+        elif s.type_id in eng:
+            structure_type = 1
+        elif s.type_id in ref:
+            structure_type = 2
+        elif s.type_id in fle:
+            structure_type = 3
+
+        for service in s.structureservice_set.all():
+            if service.state == 'online':
+                fuel_use =  citadel_service_mods[service.name][structure_type]
+                total_hourly_fuel += fuel_use
+                structure_hourly_fuel += fuel_use
+
+        structure_tree.append({'structure': s, 'fuel_req': structure_hourly_fuel})
+
+    context = {
+        'structures': structure_tree,
+        'total_hourly_fuel': total_hourly_fuel,
+    }
+    return render(request, 'alliancetools/fuels.html', context=context)
