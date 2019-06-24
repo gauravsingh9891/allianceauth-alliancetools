@@ -29,12 +29,15 @@
 .form-control {
     margin: 2px;
 }
+
+
 </style>
+
 {% endblock extra_css %}
 {% block content %}
     <div class="col-lg-12">
         <div class="col-lg-10 col-lg-offset-1 container">
-            <h4> </h4>
+            {% if add_structs or add_tokens or add_tokens %}<h4> </h4>
             <nav class="navbar navbar-default">
                 <div class="container-fluid">
                     <ul class="nav navbar-nav ">
@@ -43,7 +46,7 @@
                        {% if add_structs %}<li><a href="{% url 'alliancetools:add_structs' %}">{% trans "Add New Structure Token" %}</a></li>{% endif %}
                     </ul>
                 </div>
-            </nav>
+            </nav>{% endif %}
 
             {% block at_block %}{% endblock %}
         </div>

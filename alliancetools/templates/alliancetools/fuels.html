@@ -6,12 +6,34 @@
 {% block at_block %}
 
     {% if structures %}
-
+        <h2 class="text-center">Structure and Fuel Stats</h2>
+        <hr>
+        <div class="row ">
+            <div id="chart_div" class="col-lg-4" style="height: 400px">
+            </div>
+            <div id="chart_info" class="col-lg-8 align-center" style="height: 400px">
+                <div class="text-center col-lg-6">
+                    <h4 class="text-center">Filtered Stats</h4><hr>
+                    <p>Structures Matching Filter <span id="total_str" class="label label-primary"></span></p>
+                    <p> Block Usage (Month) <span id="total_fuel" class="label label-primary"></span></p>
+                    <p>Filtered System Count <span id="total_system" class="label label-primary"></span></p>
+                    <p>Filtered Constelation Count <span id="total_const" class="label label-primary"></span></p>
+                    <p>Filtered Region Count <span id="total_region" class="label label-primary"></span></p>
+                </div>
+                <div class="text-center col-lg-6 hide">
+                    <h4 class="text-center">Filtered Fuel Stats</h4><hr>
+                    <p>Total Current Block Count <span class="label label-primary">0</span></p>
+                    <p>Approx Time of Current Stocks <span class="label label-primary">0</span></p>
+                </div>
+            </div>
+        </div>
         <!-- <div class="row ">
             <p>Total Fuel blocks burnt per week: {% widthratio total_hourly_fuel 1 168 %}</p>
             <p>Total Fuel blocks burnt per month: {% widthratio total_hourly_fuel 1 720 %}</p>
             <p>Total Fuel blocks burnt per year: {% widthratio total_hourly_fuel 1 8736 %}</p>
         </div> -->
+        <hr>
+        <h4>Filtering</h4>
         <div class="row ">
             <table id="table-structs" class="table table-hover dataTable">
                 <thead>
@@ -21,6 +43,8 @@
                     <th class="text-center">Fuel Expires</th>
                     <th class="text-center">Services</th>
                     <th class="text-center">State</th>
+                    <th class="text-center">System</th>
+                    <th class="text-center">Constelation</th>
                     <th class="text-center">Region</th>
                     <th class="text-center">Corp</th>
                     <th class="text-center">Type</th>
@@ -43,6 +67,8 @@
                         {% endif %}
                     {% endfor %}</td>
                     <td class="text-center">{{ structure.structure.state|deslug|title }}</td>
+                    <th class="text-center">{{ structure.structure.system_name.solarSystemName }}</th>
+                    <th class="text-center">{{ structure.structure.system_name.constellationName }}</th>
                     <th class="text-center">{{ structure.structure.system_name.regionName }}</th>
                     <th class="text-center">{{ structure.structure.corporation.corporation_name }}</th>
                     <th class="text-center">{{ structure.structure.type_name.name }}</th>
@@ -54,7 +80,7 @@
                 {% endfor %}
                 <tfoot>
                     <th class="text-center"></th>
-                    <th class="text-center">Totals Visible:</th>
+                    <th class="text-center"></th>
                     <th class="text-center"></th>
                     <th class="text-center"></th>
                     <th class="text-center"></th>
@@ -74,21 +100,112 @@
 {% block extra_javascript %}
     {% include 'bundles/datatables-js.html' %}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.bundle.min.js"></script>
-	<script>!function(t){function e(t){var e={columns:[],columnsIdxList:[],bootstrap:!1,autoSize:!0,label:"Filter "};if("bootstrap"in t&&"boolean"==typeof t.bootstrap&&(e.bootstrap=t.bootstrap),"autoSize"in t&&"boolean"==typeof t.autoSize&&(e.autoSize=t.autoSize),"label"in t&&"string"==typeof t.label&&(e.label=t.label),"columns"in t)for(var i=0;i<t.columns.length;i++){var n=t.columns[i];if("idx"in n&&"number"==typeof n.idx){var o=n.idx;e.columns[o]={title:null,maxWidth:null,autoSize:!0},e.columnsIdxList.push(o),"title"in n&&"string"==typeof n.title&&(e.columns[o].title=n.title),"maxWidth"in n&&"string"==typeof n.maxWidth&&(e.columns[o].maxWidth=n.maxWidth),"autoSize"in n&&"boolean"==typeof n.autoSize&&(e.columns[o].autoSize=n.autoSize)}}return e}t(document).on("preInit.dt",function(i,n){if("dt"===i.namespace){var o=new t.fn.dataTable.Api(n),a=o.table().node().id,l=o.init();if("filterDropDown"in l){var r=e(l.filterDropDown);if(0!=r.columns.length){var u=o.table().container(),s=a+"_filterWrapper",c=s+" "+(r.bootstrap?"form-inline":"");t(u).prepend('<div id="'+s+'" class="'+c+'">'+r.label+"</div>"),o.columns(r.columnsIdxList).every(function(){var e=this.index(),i=null!==r.columns[e].title?r.columns[e].title:t(this.header()).html();""==i&&(i="column "+(e+1));var n="form-control "+a+"_filterSelect",o=a+"_filterSelect"+e;t("#"+s).append('<select id="'+o+'" class="'+n+'"></select>');var l=t("#"+o).empty().append('<option value="">('+i+")</option>");})}}}}),t(document).on("init.dt",function(i,n){if("dt"===i.namespace){var o=new t.fn.dataTable.Api(n),a=o.table().node().id,l=o.init();if("filterDropDown"in l){var r=e(l.filterDropDown);o.table().container();o.columns(r.columnsIdxList).every(function(){var e=this,i=e.index(),n=t("#"+(a+"_filterSelect"+i));n.on("change",function(){var i=t.fn.dataTable.util.escapeRegex(t(this).val());e.search(i?"^"+i+"$":"",!0,!1).draw()}),e.data().unique().sort().each(function(t,e){""!=t&&n.append('<option value="'+t+'">'+t+"</option>")})})}}})}(jQuery);</script>
-
+	<script>! function(t) {
+            function e(t) {
+                var e = {
+                    columns: [],
+                    columnsIdxList: [],
+                    bootstrap: !1,
+                    autoSize: !0,
+                    label: "Filter "
+                };
+                if ("bootstrap" in t && "boolean" == typeof t.bootstrap && (e.bootstrap = t.bootstrap), "autoSize" in t && "boolean" == typeof t.autoSize && (e.autoSize = t.autoSize), "label" in t && "string" == typeof t.label && (e.label = t.label), "columns" in t)
+                    for (var i = 0; i < t.columns.length; i++) {
+                        var n = t.columns[i];
+                        if ("idx" in n && "number" == typeof n.idx) {
+                            var o = n.idx;
+                            e.columns[o] = {
+                                title: null,
+                                maxWidth: null,
+                                autoSize: !0
+                            }, e.columnsIdxList.push(o), "title" in n && "string" == typeof n.title && (e.columns[o].title = n.title), "maxWidth" in n && "string" == typeof n.maxWidth && (e.columns[o].maxWidth = n.maxWidth), "autoSize" in n && "boolean" == typeof n.autoSize && (e.columns[o].autoSize = n.autoSize)
+                        }
+                    }
+                return e
+            }
+            t(document).on("preInit.dt", function(i, n) {
+                if ("dt" === i.namespace) {
+                    var o = new t.fn.dataTable.Api(n),
+                        a = o.table().node().id,
+                        l = o.init();
+                    if ("filterDropDown" in l) {
+                        var r = e(l.filterDropDown);
+                        if (0 != r.columns.length) {
+                            var u = o.table().container(),
+                                s = a + "_filterWrapper",
+                                c = s + " " + (r.bootstrap ? "form-inline" : "");
+                            t(u).prepend('<div id="' + s + '" class="' + c + '">' + r.label + "</div><hr>"), o.columns(r.columnsIdxList).every(function() {
+                                var e = this.index(),
+                                    i = null !== r.columns[e].title ? r.columns[e].title : t(this.header()).html();
+                                "" == i && (i = "column " + (e + 1));
+                                var n = "form-control " + a + "_filterSelect",
+                                    o = a + "_filterSelect" + e;
+                                t("#" + s).append('<select id="' + o + '" class="' + n + '"></select>');
+                                var l = t("#" + o).empty().append('<option value="">(' + i + ")</option>");
+                            })
+                        }
+                    }
+                }
+            }), t(document).on("init.dt", function(i, n) {
+                if ("dt" === i.namespace) {
+                    var o = new t.fn.dataTable.Api(n),
+                        a = o.table().node().id,
+                        l = o.init();
+                    if ("filterDropDown" in l) {
+                        var r = e(l.filterDropDown);
+                        o.table().container();
+                        o.columns(r.columnsIdxList).every(function() {
+                            var e = this,
+                                i = e.index(),
+                                n = t("#" + (a + "_filterSelect" + i));
+                            n.on("change", function() {
+                                var i = t.fn.dataTable.util.escapeRegex(t(this).val());
+                                e.search(i ? "^" + i + "$" : "", !0, !1).draw()
+                            }), e.data().unique().sort().each(function(t, e) {
+                                "" != t && n.append('<option value="' + t + '">' + t + "</option>")
+                            })
+                        })
+                    }
+                }
+            })
+        }(jQuery);
+        </script>
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/chartist.js/latest/chartist.min.css">
+    <style>
+    .ct-label {
+        font-size: 15px;
+        color: black;
+        font-weight: 600;
+        fill: rgba(0,0,0,0.8);
+    }
+    .align-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    }
+    </style>
+    <script src="//cdn.jsdelivr.net/chartist.js/latest/chartist.min.js"></script>
+    
 {% endblock %}
 {% block extra_script %}
     $(document).ready(function() {
         $('#table-structs').DataTable({
+            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
             "filterDropDown": {
 					columns: [{
-						idx: 6
+                        idx: 6
                             },
                             {
-						idx: 7
+                        idx: 7
                             },
                             {
-						idx: 8
+                        idx: 8
+                            },
+                            {
+						idx:9
+                            },
+                            {
+						idx: 10
                             },
                             {
 						idx: 5
@@ -98,26 +215,85 @@
             "columnDefs": [
                 { "searchable": false, "targets": [0] },
                 { "sortable": false, "targets": [0] },
-                { "visible": false, "targets": [6, 7, 8] }
+                { "visible": false, "targets": [6, 7, 8, 9, 10] }
             ],
             "order": [
                 [1, "desc"]
             ],
-            "pageLength": 25,
+            "pageLength": -1,
             "footerCallback": function ( row, data, start, end, display ) {
+                function numberWithCommas(x) {
+                    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                }
                 var api = this.api(), data;
 
                 var pageTotal = api
-                    .column( 2, { page: 'current'} )
+                    .column(2, { page: 'current'})
                     .data()
                     .reduce( function (a, b) {
                         return Number(a) + Number(b);
                     }, 0 );
 
+                var total_count = api.column(10, { page: 'current'}).data().count();
+                var systems = api.column(6, { page: 'current'}).data().unique().count();
+                var constel = api.column(7, { page: 'current'}).data().unique().count();
+                var region = api.column(8, { page: 'current'}).data().unique().count();
 
+                var types = [];
+
+                api.column(10, { page: 'current'}).data().unique().each(function(value, index) {
+                    types.push(value);
+                });
+
+                var type_count = [];
+                var t;
+                for ( t of types) {
+                    console.log(t)
+                    filteredData = api.column(10, {search: 'applied'})
+                                        .data()
+                                        .filter( function ( value, index ) {
+                                            return value == t ? true : false;
+                                        } ).count();
+                    type_count.push(filteredData);
+                }
+                console.log(types);
+                console.log(type_count);
                     // Update footer by showing the total with the reference of the column index
-                $( api.column( 2 ).footer() ).html(pageTotal);
-$( api.column( 2 ).header() ).html("Fuel Use <span class=\"label label-primary\">Total: " + pageTotal + "</span>");
+                //$( api.column( 2 ).footer() ).html(pageTotal);
+                //$( api.column( 2 ).header() ).html("Fuel Use <span class=\"label label-primary\">Total: " + pageTotal + "</span>");
+                $('#total_fuel').html(numberWithCommas(pageTotal))
+                $('#total_str').html(numberWithCommas(total_count))
+                $('#total_system').html(numberWithCommas(systems))
+                $('#total_const').html(numberWithCommas(constel))
+                $('#total_region').html(numberWithCommas(region))
+
+                var data = {
+                    // A labels array that can contain any sort of values
+                    labels: types,
+                    // Our series array that contains series objects or in this case series data arrays
+                    series: type_count
+                    
+                  };
+                  var options = {
+                      
+                    };
+                  
+                  var responsiveOptions = [
+                    ['screen and (min-width: 640px)', {
+                      chartPadding: 30,
+                      labelOffset: 100,
+                      labelDirection: 'explode',
+                      labelInterpolationFnc: function(value, idx) {
+                        return value + " (" + data.series[idx] +")";
+                      }
+                    }],
+                    ['screen and (min-width: 1024px)', {
+                      labelOffset: 80,
+                      chartPadding: 20
+                    }]
+                  ];
+                  
+                  new Chartist.Pie('#chart_div', data, options, responsiveOptions);                
             }
         });
     });
