@@ -15,7 +15,7 @@ from django.conf import settings
 from django.core.exceptions import PermissionDenied
 
 from .models import AllianceToolCharacter, Structure, CorpAsset, AllianceToolJob, AllianceToolJobComment, \
-    NotificationPing, Poco, EveName, Notification, MapSolarSystem, TypeName
+    NotificationPing, Poco, EveName, Notification, MapSolarSystem, TypeName, MoonExtractEvent
 from .forms import AddJob, AddComment, EditJob
 from .tasks import _get_new_eve_name
 from easyaudit.models import CRUDEvent
@@ -27,7 +27,8 @@ CORP_REQUIRED_SCOPES = ['esi-characters.read_notifications.v1',
                         'esi-wallet.read_corporation_wallets.v1',
                         'esi-corporations.read_structures.v1',
                         'esi-universe.read_structures.v1',
-                        'esi-planets.read_customs_offices.v1']
+                        'esi-planets.read_customs_offices.v1',
+                        'esi-industry.read_corporation_mining.v1']
 
 
 POCO_REQUIRED_SCOPES = ['esi-planets.read_customs_offices.v1',
@@ -39,6 +40,12 @@ STRUCTURES_REQUIRED_SCOPES = ['esi-corporations.read_structures.v1',
                               'esi-universe.read_structures.v1',
                               'esi-characters.read_corporation_roles.v1',
                               'esi-characters.read_notifications.v1']
+
+MOONS_REQUIRED_SCOPES = ['esi-corporations.read_structures.v1',
+                         'esi-universe.read_structures.v1',
+                         'esi-characters.read_corporation_roles.v1',
+                         'esi-characters.read_notifications.v1',
+                         'esi-industry.read_corporation_mining.v1'] 
 
 
 @login_required
@@ -461,3 +468,48 @@ def fuel_levels(request):
         'total_hourly_fuel': total_hourly_fuel,
     }
     return render(request, 'alliancetools/fuels.html', context=context)
+
+@login_required
+def extractions(request):
+    if request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings'):
+        events = MoonExtractEvent.objects.select_related('structure', 'structure__system_name', 'structure__type_name', 'moon_name', 'notification', 'corp').all()
+    else:
+        raise PermissionDenied('You do not have permission to be here. This has been Logged!')
+
+    note_output = []
+    type_ids = []
+    for e in events:
+        notification_data = yaml.load(e.notification.notification_text)
+        totalm3 = 0
+        for id, v in notification_data['oreVolumeByType'].items():
+            type_ids.append(id)
+            totalm3 = totalm3+v
+
+        note_output.append({'array':notification_data, 'db':e, 'total':totalm3})
+
+    type_ids = set(type_ids)
+
+    types = TypeName.objects.filter(type_id__in=type_ids)
+
+    type_lookup = {}
+
+    for id in types:
+        type_lookup[id.type_id] = id.name
+
+    for note in note_output:
+        note['array']['ore'] = []
+        for id,v in note['array']['oreVolumeByType'].items():
+            output = {'name':type_lookup[id],
+                      'id': id,
+                      'm3': v,
+                      'percent': v/note['total']*100
+                      }
+
+            note['array']['ore'].append(output)
+        print(note, flush=True)
+
+    context = {
+        'events': note_output,
+    }
+
+    return render(request, 'alliancetools/moons.html', context=context)

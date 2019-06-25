@@ -16,6 +16,7 @@ urlpatterns = [
     url(r'^addpoco/$', views.alliancetools_add_poco, name='add_poco'),
     url(r'^addstruct/$', views.alliancetools_add_structures, name='add_structs'),
     url(r'^jobs/$', views.jobs_board, name='jobs_board'),
+    url(r'^moons/$', views.extractions, name='moons'),
     url(r'^add_job/$', views.add_job, name='add_job'),
     url(r'^add_comment/(?P<job_id>(\d)*)/$', views.add_comment, name='add_comment'),
     url(r'^edit_job/(?P<job_id>(\d)*)/$', views.edit_job, name='edit_job'),

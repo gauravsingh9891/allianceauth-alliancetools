@@ -71,12 +71,14 @@ class AllianceToolCharacter(models.Model):
     last_update_assets = models.DateTimeField(null=True, default=None)
     last_update_structs = models.DateTimeField(null=True, default=None)
     last_update_pocos = models.DateTimeField(null=True, default=None)
+    last_update_moons = models.DateTimeField(null=True, default=None)
 
     next_update_wallet = models.DateTimeField(null=True, default=None)
     next_update_notifs = models.DateTimeField(null=True, default=None)
     next_update_assets = models.DateTimeField(null=True, default=None)
     next_update_structs = models.DateTimeField(null=True, default=None)
     next_update_pocos = models.DateTimeField(null=True, default=None)
+    next_update_moons = models.DateTimeField(null=True, default=None)
 
 
     def __str__(self):
@@ -366,5 +368,20 @@ class Poco(models.Model):
     allow_alliance_access = models.BooleanField()
     allow_access_with_standings = models.BooleanField()
 
+class MoonExtractEvent(models.Model):
+    start_time = models.DateTimeField()
+    arrival_time = models.DateTimeField()
+    decay_time = models.DateTimeField()
+    structure = models.ForeignKey(Structure, on_delete=models.CASCADE)
+    moon_name = models.ForeignKey(ItemName, on_delete=models.SET_NULL, null=True, default=None)
+    moon_id = models.IntegerField()
+    corp = models.ForeignKey(EveCorporationInfo, on_delete=models.CASCADE)
+    notification = models.ForeignKey(Notification, on_delete=models.SET_NULL, null=True, default=None)
+
+    class Meta:
+        unique_together = (('arrival_time', 'moon_id'),)
+
+    def __str__(self):
+        return "{} - {}".format(self.moon_name.name, self.arrival_time)
 
 

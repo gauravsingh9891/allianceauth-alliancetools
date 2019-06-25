@@ -4,12 +4,12 @@ import os
 from celery import shared_task
 from .models import CorpAsset, ItemName, TypeName, Structure, Notification, CorporationWalletJournalEntry, \
     CorporationWalletDivision, AllianceToolCharacter, StructureService, BridgeOzoneLevel, MapSolarSystem, EveName, \
-    NotificationAlert, NotificationPing, Poco, PocoCelestial, AssetLocation
+    NotificationAlert, NotificationPing, Poco, PocoCelestial, AssetLocation, MoonExtractEvent
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Token
 from .esi_workaround import EsiResponseClient
 from django.utils import timezone
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from allianceauth.services.tasks import QueueOnce
 from django.db.models import Sum
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
@@ -1310,3 +1310,81 @@ def update_corp_pocos(character_id):
     return "Finished Pocos for: %s" % (str(character_id))
 
     # https://www.fuzzwork.co.uk/api/nearestCelestial.php?x=660502472160&y=-130687672800&z=-813545103840&solarsystemid=30002682
+
+
+@shared_task()
+def run_moon_exracts(character_id):
+    logger.debug("Started pocos for: %s" % str(character_id))
+
+    req_scopes = ['esi-characters.read_notifications.v1', 'esi-industry.read_corporation_mining.v1', 'esi-universe.read_structures.v1', 'esi-characters.read_corporation_roles.v1']
+    req_roles = ['CEO', 'Director', "Station_Manager"]
+
+    token = _get_token(character_id, req_scopes)
+
+    if not token:
+        return "No Tokens"
+
+    c = EsiResponseClient(token).get_esi_client(response=True)
+
+    # check roles!
+    roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
+
+    has_roles = False
+    for role in roles.get('roles', []):
+        if role in req_roles:
+            has_roles = True
+
+    if not has_roles:
+        return "No Roles on Character"
+
+    _character = AllianceToolCharacter.objects.get(character__character_id=character_id)
+    _corporation = EveCorporationInfo.objects.get(corporation_id=_character.character.corporation_id)
+
+    e, result = c.Industry.get_corporation_corporation_id_mining_extractions(corporation_id=_character.character.corporation_id).result()
+
+    cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(tzinfo=timezone.utc)
+
+    for event in e:
+        # Gather structure information.
+        try:
+            moon = ItemName.objects.get(item_id=event['moon_id'])
+        except ObjectDoesNotExist:
+            # Moon Info not in database? need to run sde import Skip for now #TODO esi this
+            continue
+
+        try:
+            ref = Structure.objects.get(structure_id=event['structure_id'])
+        except ObjectDoesNotExist:
+            # structure not in db yet ( probably due to cache we can try again next time. )
+            continue
+
+        # Times
+        arrival_time = event['chunk_arrival_time']
+        start_time = event['extraction_start_time']
+        decay_time = event['natural_decay_time']
+
+        try:
+            notif = Notification.objects.filter(notification_text__contains="structureID: %s" % str(event['structure_id']),
+                                                notification_type="MoonminingExtractionStarted").order_by('-timestamp').first()
+        except:
+            notif = None
+
+        try:
+            extract = MoonExtractEvent.objects.get_or_create(start_time=start_time, 
+                                                         decay_time=decay_time,
+                                                         arrival_time=arrival_time, 
+                                                         structure=ref, 
+                                                         moon_name=moon,
+                                                         moon_id=event['moon_id'],
+                                                         corp=_corporation,
+                                                         notification=notif)
+        except IntegrityError:
+            continue
+
+
+
+    AllianceToolCharacter.objects.filter(character__character_id=character_id).update(
+        next_update_moons=cache_expires,
+        last_update_moons=datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
+
+    return "Finished Moon Pulls for: %s" % (str(character_id))
