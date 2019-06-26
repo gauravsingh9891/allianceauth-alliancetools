@@ -1388,3 +1388,57 @@ def run_moon_exracts(character_id):
         last_update_moons=datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
 
     return "Finished Moon Pulls for: %s" % (str(character_id))
+
+
+@shared_task(bind=True, base=QueueOnce)
+def ping_upcoming_moons(self):
+    logger.debug("Started moons pinger")
+
+    today = datetime.datetime.today().replace(tzinfo=timezone.utc)
+    end = today + datetime.timedelta(days=7)
+
+    events = MoonExtractEvent.objects.select_related('structure',
+                                                     'structure__system_name',
+                                                     'structure__type_name',
+                                                     'moon_name',
+                                                     'notification',
+                                                     'corp').filter(arrival_time__gte=today, arrival_time__lte=end)
+
+    note_output = []
+    type_ids = []
+    for e in events:
+        notification_data = yaml.load(e.notification.notification_text)
+        totalm3 = 0
+        for id, v in notification_data['oreVolumeByType'].items():
+            type_ids.append(id)
+            totalm3 = totalm3+v
+
+        note_output.append({'array':notification_data, 'db':e, 'total':totalm3})
+
+    type_ids = set(type_ids)
+
+    types = TypeName.objects.filter(type_id__in=type_ids)
+
+    type_lookup = {}
+
+    for id in types:
+        type_lookup[id.type_id] = id.name
+
+    embeds = []
+    for note in note_output:
+        ore_str = ""
+        for id,v in note['array']['oreVolumeByType'].items():
+            ore_str = ore_str + "**" + str(type_lookup[id]) +"** *(" + "{0:.2f}".format(v/note['total']*100) + "%)* "\
+                        + "{:,.2f}".format(v/1000) + "km3\n"
+
+        embed = {'color': 60159,
+                 'title': note['db'].structure.name,
+                 'description': note['db'].moon_name.name,
+                 'fields': [{'name': 'Ready', 'value': note['db'].arrival_time.strftime("%Y-%m-%d %H:%M"), 'inline': True},
+                            {'name': 'Auto Frac', 'value': note['db'].decay_time.strftime("%Y-%m-%d %H:%M"), 'inline': True},
+                            {'name': 'Ores', 'value': ore_str, 'inline': True}]}
+
+        embeds.append(embed)
+
+    print(json.dumps(embeds))
+

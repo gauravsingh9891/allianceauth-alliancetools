@@ -513,3 +513,4 @@ def extractions(request):
     }
 
     return render(request, 'alliancetools/moons.html', context=context)
+
