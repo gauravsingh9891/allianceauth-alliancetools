@@ -1012,8 +1012,8 @@ def send_discord_pings(self):
 
                         if ping:
                             try:
-                                if ItemName.objects.get(item_id=notification_data['charID']).exists():
-                                    ping=False  # We are an NPC
+                                if ItemName.objects.filter(item_id=notification_data['charID']).exists():
+                                    pass# ping=False  # We are an NPC
                             except ObjectDoesNotExist:
                                 pass
                             except MultipleObjectsReturned:
@@ -1023,10 +1023,12 @@ def send_discord_pings(self):
                         if ping:
                             for hook in attack_hooks:
                                 if hook.corporation is None:
-                                    embed_lists[hook.discord_webhook]['alert_ping'] = True
+                                    if not ItemName.objects.filter(item_id=notification_data['charID']).exists():
+                                        embed_lists[hook.discord_webhook]['alert_ping'] = True
                                     embed_lists[hook.discord_webhook]['embeds'].append(ping)
                                 elif hook.corporation.corporation_id == notification.character.character.corporation_id:
-                                    embed_lists[hook.discord_webhook]['alert_ping'] = True
+                                    if not ItemName.objects.filter(item_id=notification_data['charID']).exists():
+                                        embed_lists[hook.discord_webhook]['alert_ping'] = True
                                     embed_lists[hook.discord_webhook]['embeds'].append(ping)
                                 else:
                                     pass #ignore
@@ -1395,7 +1397,7 @@ def ping_upcoming_moons(self):
     logger.debug("Started moons pinger")
 
     today = datetime.datetime.today().replace(tzinfo=timezone.utc)
-    end = today + datetime.timedelta(days=7)
+    end = today + datetime.timedelta(days=17)
 
     events = MoonExtractEvent.objects.select_related('structure',
                                                      'structure__system_name',
@@ -1403,6 +1405,11 @@ def ping_upcoming_moons(self):
                                                      'moon_name',
                                                      'notification',
                                                      'corp').filter(arrival_time__gte=today, arrival_time__lte=end)
+
+    discord_hooks = MoonWebhook.objects.all()
+    embed_lists = {}
+    for hook in discord_hooks:
+        embed_lists[hook.discord_webhook] = {'hook': hook, 'embeds': []}
 
     note_output = []
     type_ids = []
@@ -1438,7 +1445,57 @@ def ping_upcoming_moons(self):
                             {'name': 'Auto Frac', 'value': note['db'].decay_time.strftime("%Y-%m-%d %H:%M"), 'inline': True},
                             {'name': 'Ores', 'value': ore_str, 'inline': True}]}
 
+        ## check for filtering on each webhook
+        for hook in embed_lists:
+            # corp
+            if hook['hook'].corporation:
+                if note['db'].corp.corporation_id == hook['hook'].corporation.corporation_id:
+                    pass
+                else:
+                    continue
+
+            # system
+            if hook['hook'].system_filter:
+                if note['db'].corp.corporation_id == hook['hook'].corporation.corporation_id:
+                    pass
+                else:
+                    continue
+
+            # constel
+            if hook['hook'].constellation_filter:
+                if note['db'].corp.corporation_id == hook['hook'].corporation.corporation_id:
+                    pass
+                else:
+                    continue
+
+            # region
+            if hook['hook'].region_filter:
+                if note['db'].corp.corporation_id == hook['hook'].corporation.corporation_id:
+                    pass
+                else:
+                    continue
+
+
         embeds.append(embed)
 
-    print(json.dumps(embeds))
+    #print(json.dumps(embeds))
+
+    if len(embeds) > 0:
+        discord_hooks = MoonWebhook.objects.all()
+        for hook in discord_hooks:
+
+            custom_headers = {'Content-Type': 'application/json'}
+            alertText = "@here This Weeks moons!"
+            chunks = [embeds[i:i + 10] for i in range(0, len(embeds), 10)]
+            for chunk in chunks:
+                try:
+                    r = requests.post(hook.discord_webhook, headers=custom_headers,
+                                      data=json.dumps({'content': alertText, 'embeds': chunk}))
+                    r.raise_for_status()
+                    time.sleep(1)
+                    alertText = ""
+                except:
+                    logging.exception("DISCORD ERROR!")
+                    print(json.dumps({'content': alertText, 'embeds': chunk}), flush=True)
+
 

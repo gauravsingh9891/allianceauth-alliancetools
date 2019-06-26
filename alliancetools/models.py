@@ -384,4 +384,22 @@ class MoonExtractEvent(models.Model):
     def __str__(self):
         return "{} - {}".format(self.moon_name.name, self.arrival_time)
 
+class MoonWebhook(models.Model):
+    discord_webhook = models.TextField()
+    corporation = models.ForeignKey(EveCorporationInfo,
+                                    on_delete=models.SET_NULL,
+                                    null=True,
+                                    default=None,
+                                    blank=True)
+    ping_day = models.IntegerField(default=6)
+    ping_hour = models.IntegerField(default=13)
+    days_forward = models.IntegerField(default=4)
+    system_filter = models.CharField(max_length=50)
+    constellation_filter = models.CharField(max_length=50)
+    region_filter = models.CharField(max_length=50)
+    last_ping = models.DateTimeField(null=True, default=None)
+    last_ping_details = models.TextField()
+
+    def __str__(self):
+        return "Moon Hook for: %s" % (self.corporation.corporation_name if self.corporation else "All")
 
