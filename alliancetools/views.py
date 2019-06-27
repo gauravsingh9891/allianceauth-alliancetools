@@ -514,3 +514,18 @@ def extractions(request):
 
     return render(request, 'alliancetools/moons.html', context=context)
 
+
+@login_required
+def structure_timers(request):
+    if request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings'):
+        events = Structure.objects.select_related('corporation', 'system_name', 'type_name').all()\
+                    .exclude(state="shield_vulnerable").order_by('state_timer_end')
+    else:
+        raise PermissionDenied('You do not have permission to be here. This has been Logged!')
+
+
+    context = {
+        'structure_timers': events,
+    }
+
+    return render(request, 'alliancetools/structure_timers.html', context=context)
