@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required, permission_required, 
 from django.contrib import messages
 from esi.decorators import token_required
 from allianceauth.eveonline.models import EveCharacter
-from allianceauth.authentication.models import UserProfile
+from allianceauth.authentication.models import UserProfile, State
 from django.db import IntegrityError
 from django.utils import timezone
 from django.conf import settings
@@ -517,7 +517,8 @@ def extractions(request):
 
 @login_required
 def structure_timers(request):
-    if request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings'):
+    member_state = State.objects.get(name='Member')
+    if request.user.profile.state == member_state:
         events = Structure.objects.select_related('corporation', 'system_name', 'type_name').all()\
                     .exclude(state="shield_vulnerable").order_by('state_timer_end')
     else:
