@@ -1,6 +1,7 @@
 from . import urls
 from allianceauth import hooks
 from allianceauth.services.hooks import MenuItemHook, UrlHook
+from allianceauth.authentication.models import UserProfile, State
 
 
 class AllianceMenu(MenuItemHook):
@@ -25,6 +26,20 @@ class StructureMenu(MenuItemHook):
 
     def render(self, request):
         if request.user.has_perm('alliancetools.access_alliance_tools_structures') or request.user.has_perm('alliancetools.access_alliance_tools_structures_renter') or request.user.has_perm('alliancetools.corp_level_alliance_tools'):
+            return MenuItemHook.render(self, request)
+        return ''
+
+
+class TimerMenu(MenuItemHook):
+    def __init__(self):
+        MenuItemHook.__init__(self, 'Internal Timers',
+                              'fa fa-clock fa-fw',
+                              'alliancetools:timers',
+                              navactive=['alliancetools:timers'])
+
+    def render(self, request):
+        member_state = State.objects.get(name='Member')
+        if request.user.profile.state == member_state:
             return MenuItemHook.render(self, request)
         return ''
 
@@ -75,6 +90,10 @@ def register_menu():
 @hooks.register('menu_item_hook')
 def register_menu():
     return StructureMenu()
+
+@hooks.register('menu_item_hook')
+def register_menu():
+    return TimerMenu()
 
 @hooks.register('menu_item_hook')
 def register_menu():
