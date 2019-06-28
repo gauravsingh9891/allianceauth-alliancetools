@@ -33,7 +33,7 @@ class StructureMenu(MenuItemHook):
 class TimerMenu(MenuItemHook):
     def __init__(self):
         MenuItemHook.__init__(self, 'Internal Timers',
-                              'fa fa-clock fa-fw',
+                              'fa fa-clock-o fa-fw',
                               'alliancetools:timers',
                               navactive=['alliancetools:timers'])
 
