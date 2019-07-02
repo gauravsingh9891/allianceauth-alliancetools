@@ -1508,6 +1508,7 @@ def update_corp_mining_observers(character_id):
         return MiningObserver(corp=_corp,
                               last_updated=_last_updated,
                               observer_id=_observer.get('observer_id'),
+                              structure=Structure.objects.get(structure_id=_observer.get('observer_id')),
                               observer_type=_observer.get('observer_type'))
 
     def _observation_create(_observer, _last_updated, _observer_id):
@@ -1569,6 +1570,9 @@ def update_corp_mining_observers(character_id):
             else:
                 MiningObserver.objects.filter(observer_id=observer.get('observer_id')).update(
                     last_updated=last_updated_datetime,
+                    observer_id=observer.get('observer_id'),
+                    structure=Structure.objects.get(structure_id=observer.get('observer_id')),
+                    observer_type=observer.get('observer_type')
                 )
         ob_page += 1
 

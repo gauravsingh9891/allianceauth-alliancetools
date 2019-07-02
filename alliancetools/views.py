@@ -15,7 +15,7 @@ from django.conf import settings
 from django.core.exceptions import PermissionDenied
 
 from .models import AllianceToolCharacter, Structure, CorpAsset, AllianceToolJob, AllianceToolJobComment, \
-    NotificationPing, Poco, EveName, Notification, MapSolarSystem, TypeName, MoonExtractEvent
+    NotificationPing, Poco, EveName, Notification, MapSolarSystem, TypeName, MoonExtractEvent, MiningObservation
 from .forms import AddJob, AddComment, EditJob
 from .tasks import _get_new_eve_name
 from easyaudit.models import CRUDEvent
@@ -544,3 +544,36 @@ def structure_timers(request):
     }
 
     return render(request, 'alliancetools/structure_timers.html', context=context)
+
+
+@login_required
+def observers(request):
+    if request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings'):
+        observed = MiningObservation.objects.select_related('observer__structure').all()#\
+            #.filter(last_updated__gte=datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(days=30))
+    else:
+        raise PermissionDenied('You do not have permission to be here. This has been Logged!')
+
+    ob_data = {}
+    earliest_date = datetime.datetime.utcnow().replace(tzinfo=timezone.utc)
+    total_m3 = 0
+    for i in observed:
+        total_m3 = total_m3+i.quantity/1000
+        if i.observer.structure.name not in ob_data:
+            ob_data[i.observer.structure.name] = i.quantity/1000
+        else:
+            ob_data[i.observer.structure.name] = ob_data[i.observer.structure.name]+i.quantity/1000
+
+        if earliest_date > i.last_updated:
+            earliest_date = i.last_updated
+
+    context = {
+        'observed_data': ob_data,
+        'earliest_date': earliest_date,
+        'total_m3': total_m3,
+
+    }
+
+    return render(request, 'alliancetools/observers.html', context=context)
+
+
