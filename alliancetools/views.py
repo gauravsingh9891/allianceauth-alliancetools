@@ -13,6 +13,7 @@ from django.db import IntegrityError
 from django.utils import timezone
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
+from django.db.models import Subquery, OuterRef
 
 from .models import AllianceToolCharacter, Structure, CorpAsset, AllianceToolJob, AllianceToolJobComment, \
     NotificationPing, Poco, EveName, Notification, MapSolarSystem, TypeName, MoonExtractEvent, MiningObservation
@@ -549,12 +550,15 @@ def structure_timers(request):
 @login_required
 def observers(request):
     if request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings'):
-        observed = MiningObservation.objects.select_related('observer__structure').all()#\
+        types = TypeName.objects.filter(type_id=OuterRef('type_id'))
+        observed = MiningObservation.objects.select_related('observer__structure').all().annotate(type_name=Subquery(types.values('name')))#\
             #.filter(last_updated__gte=datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(days=30))
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
 
+
     ob_data = {}
+    type_data = {}
     earliest_date = datetime.datetime.utcnow().replace(tzinfo=timezone.utc)
     total_m3 = 0
     for i in observed:
@@ -564,11 +568,17 @@ def observers(request):
         else:
             ob_data[i.observer.structure.name] = ob_data[i.observer.structure.name]+i.quantity/1000
 
+        if i.type_name not in type_data:
+            type_data[i.type_name] = i.quantity/1000
+        else:
+            type_data[i.type_name] = type_data[i.type_name]+i.quantity/1000
+
         if earliest_date > i.last_updated:
             earliest_date = i.last_updated
 
     context = {
         'observed_data': ob_data,
+        'type_data': type_data,
         'earliest_date': earliest_date,
         'total_m3': total_m3,
 

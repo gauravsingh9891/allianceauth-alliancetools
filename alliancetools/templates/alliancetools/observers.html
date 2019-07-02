@@ -4,10 +4,9 @@
 {% load humanize %}
 {% load alliancetools_tags %}
 {% block at_block %}
-
+    <h2 class="text-center">Last 60 Days Mining</h2>
+    <p class="text-center">Begining at: {{earliest_date|date:"Y-m-d"}} <br> Total km3: {{total_m3|floatformat:2|intcomma}}</p>
     {% if observed_data %}
-        <h2 class="text-center">Last 60 Days Mining</h2>
-        <p class="text-center">Begining at: {{earliest_date|date:"Y-m-d"}} <br> Total km3: {{total_m3|floatformat:2|intcomma}}</p>
 
         <div class="row ">
             <table id="table-structs" class="table table-hover dataTable">
@@ -17,6 +16,30 @@
                 </thead>
                 <tbody>
                 {% for k, v in observed_data.items %}
+                <tr>
+                    <td class="text-center">{{k}}</td>
+                    <td class="text-center">{{v|floatformat:2|intcomma}}</td>
+                </tr>
+                {% empty %}
+
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+    <div class="alert alert-warning text-center">{% trans "No Info Available" %}</div>
+    {% endif %}
+
+
+    {% if type_data %}
+        <div class="row ">
+            <table id="table-ores" class="table table-hover dataTable">
+                <thead>
+                    <th class="text-center">Ore</th>
+                    <th class="text-center">Total km3</th>
+                </thead>
+                <tbody>
+                {% for k, v in type_data.items %}
                 <tr>
                     <td class="text-center">{{k}}</td>
                     <td class="text-center">{{v|floatformat:2|intcomma}}</td>
@@ -40,6 +63,13 @@
 {% block extra_script %}
     $(document).ready(function() {
         $('#table-structs').DataTable({
+
+            "order": [
+                [1, "desc"]
+            ],
+            "pageLength": 25
+        });
+        $('#table-ores').DataTable({
 
             "order": [
                 [1, "desc"]
