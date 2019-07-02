@@ -72,6 +72,7 @@ class AllianceToolCharacter(models.Model):
     last_update_structs = models.DateTimeField(null=True, default=None)
     last_update_pocos = models.DateTimeField(null=True, default=None)
     last_update_moons = models.DateTimeField(null=True, default=None)
+    last_update_moon_obs = models.DateTimeField(null=True, default=None)
 
     next_update_wallet = models.DateTimeField(null=True, default=None)
     next_update_notifs = models.DateTimeField(null=True, default=None)
@@ -79,7 +80,7 @@ class AllianceToolCharacter(models.Model):
     next_update_structs = models.DateTimeField(null=True, default=None)
     next_update_pocos = models.DateTimeField(null=True, default=None)
     next_update_moons = models.DateTimeField(null=True, default=None)
-
+    next_update_moon_obs = models.DateTimeField(null=True, default=None)
 
     def __str__(self):
         return "{}'s AllianceToolCharacter".format(self.character.character_name)
@@ -402,4 +403,26 @@ class MoonWebhook(models.Model):
 
     def __str__(self):
         return "Moon Hook for: %s" % (self.corporation.corporation_name if self.corporation else "All")
+
+
+# Corp mining observers
+class MiningObserver(models.Model):
+    corp = models.ForeignKey(EveCorporationInfo, on_delete=models.CASCADE , related_name='ob_corp')
+
+    last_updated = models.DateTimeField()
+    observer_id = models.BigIntegerField()
+    structure = models.ForeignKey(Structure, on_delete=models.SET_NULL, null=True, default=None)
+    _observer_enum = Choices('structure')
+    observer_type = models.CharField(max_length=10, choices=_observer_enum)
+
+
+# Corp Mining Observation
+class MiningObservation(models.Model):
+    observer = models.ForeignKey(MiningObserver, on_delete=models.CASCADE)
+
+    character_id = models.IntegerField()
+    last_updated = models.DateTimeField()
+    quantity = models.BigIntegerField()
+    recorded_corporation_id = models.IntegerField()
+    type_id = models.IntegerField()
 

@@ -4,7 +4,8 @@ import os
 from celery import shared_task
 from .models import CorpAsset, ItemName, TypeName, Structure, Notification, CorporationWalletJournalEntry, \
     CorporationWalletDivision, AllianceToolCharacter, StructureService, BridgeOzoneLevel, MapSolarSystem, EveName, \
-    NotificationAlert, NotificationPing, Poco, PocoCelestial, AssetLocation, MoonExtractEvent
+    NotificationAlert, NotificationPing, Poco, PocoCelestial, AssetLocation, MoonExtractEvent, MiningObservation, \
+    MiningObserver
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Token
 from .esi_workaround import EsiResponseClient
@@ -1498,4 +1499,118 @@ def ping_upcoming_moons(self):
                     logging.exception("DISCORD ERROR!")
                     print(json.dumps({'content': alertText, 'embeds': chunk}), flush=True)
 
+
+@shared_task
+def update_corp_mining_observers(character_id):
+    logger.debug("Started mining observers for: %s" % str(character_id))
+
+    def _observer_create(_corp, _observer, _last_updated):
+        return MiningObserver(corp=_corp,
+                              last_updated=_last_updated,
+                              observer_id=_observer.get('observer_id'),
+                              observer_type=_observer.get('observer_type'))
+
+    def _observation_create(_observer, _last_updated, _observer_id):
+        return MiningObservation(observer=MiningObserver.objects.get(observer_id=_observer_id),
+                              character_id=_observer.get('character_id'),
+                              last_updated=_last_updated,
+                              recorded_corporation_id=_observer.get('recorded_corporation_id'),
+                              type_id=_observer.get('type_id'),
+                              quantity=_observer.get('quantity'))
+
+    req_scopes = ['esi-industry.read_corporation_mining.v1', 'esi-characters.read_corporation_roles.v1']
+    req_roles = ['CEO', 'Director', 'Accountant']
+
+    token = _get_token(character_id, req_scopes)
+
+    if not token:
+        return "No Tokens"
+
+    c = EsiResponseClient(token).get_esi_client(response=True)
+    # check roles!
+    roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
+
+    has_roles = False
+    for role in roles.get('roles', []):
+        if role in req_roles:
+            has_roles = True
+
+    if not has_roles:
+        return "No Roles on Character"
+
+    _character = AllianceToolCharacter.objects.get(character__character_id=character_id)
+    _corporation = _character.character.corporation
+
+    observer_db_list = list(MiningObserver.objects.filter(corp=_corporation).values_list(
+        'observer_id', flat=True))
+
+    new_observers = []
+    ob_page = 1
+    total_ob_pages = 1
+    cache_expires = 0
+
+    while ob_page <= total_ob_pages:
+        observers, result = c.Industry.get_corporation_corporation_id_mining_observers(
+            corporation_id=_corporation.corporation_id,
+            page=ob_page).result()
+
+        total_ob_pages = int(result.headers['X-Pages'])
+
+        for observer in observers:
+            last_updated_datetime = datetime.datetime(
+                observer.get('last_updated').year,
+                observer.get('last_updated').month,
+                observer.get('last_updated').day).replace(tzinfo=timezone.utc)
+
+            if observer.get('observer_id') not in observer_db_list:
+
+                new_observers.append(_observer_create(_corporation, observer, last_updated_datetime))
+                observer_db_list.append(observer.get('observer_id'))
+            else:
+                MiningObserver.objects.filter(observer_id=observer.get('observer_id')).update(
+                    last_updated=last_updated_datetime,
+                )
+        ob_page += 1
+
+    MiningObserver.objects.bulk_create(new_observers, batch_size=500)
+
+
+    try:
+        latest_db_date = MiningObservation.objects.all().order_by('-last_updated')[0].last_updated
+    except:
+        latest_db_date = datetime.datetime.utcnow().replace(tzinfo=timezone.utc, year=datetime.MINYEAR)
+    MiningObservation.objects.filter(last_updated=latest_db_date).delete() # purge last day so it can be updated
+    observations_for_insert = []
+
+    for observer_id in observer_db_list:
+
+        observation_page = 1
+        total_observation_pages = 1
+        while observation_page <= total_observation_pages:
+            ob_list, result = c.Industry.get_corporation_corporation_id_mining_observers_observer_id(
+                corporation_id=_corporation.corporation_id,
+                observer_id=observer_id,
+                page=observation_page).result()
+            observation_page = int(result.headers['X-Pages'])
+            cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(
+                tzinfo=timezone.utc)
+
+            for observation in ob_list:
+                last_updated_datetime = datetime.datetime(
+                    observation.get('last_updated').year,
+                    observation.get('last_updated').month,
+                    observation.get('last_updated').day).replace(tzinfo=timezone.utc)
+                if last_updated_datetime >= latest_db_date:
+                    observations_for_insert.append(_observation_create(observation, last_updated_datetime, observer_id))
+
+            observation_page += 1
+
+    MiningObservation.objects.bulk_create(observations_for_insert, batch_size=500)
+
+    AllianceToolCharacter.objects.filter(character__character_id=character_id).update(
+        next_update_moon_obs=cache_expires,
+        last_update_moon_obs=datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
+
+
+    return "Finished observers for: %s" % (str(character_id))
 

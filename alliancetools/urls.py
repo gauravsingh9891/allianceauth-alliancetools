@@ -14,6 +14,7 @@ urlpatterns = [
     url(r'^structure/(?P<structure_id>(\d)*)/$', views.structure, name='structure'),
     url(r'^addchar/$', views.alliancetools_add_char, name='add_char'),
     url(r'^addpoco/$', views.alliancetools_add_poco, name='add_poco'),
+    url(r'^addmoons/$', views.alliancetools_add_moons, name='add_moons'),
     url(r'^addstruct/$', views.alliancetools_add_structures, name='add_structs'),
     url(r'^jobs/$', views.jobs_board, name='jobs_board'),
     url(r'^moons/$', views.extractions, name='moons'),

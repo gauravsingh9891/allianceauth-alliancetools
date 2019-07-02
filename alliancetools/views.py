@@ -121,6 +121,20 @@ def alliancetools_add_poco(request, token):
 
 
 @login_required
+@permission_required('alliancetools.admin_alliance_tools')
+@token_required(scopes=MOONS_REQUIRED_SCOPES)
+def alliancetools_add_moons(request, token):
+    try:
+        AllianceToolCharacter.objects.get_or_create(character=EveCharacter.objects.get(character_id=token.character_id))
+        return redirect('alliancetools:dashboard')
+
+    except:
+        messages.error(request, ('Error Adding Character!'))
+
+    return redirect('alliancetools:dashboard')
+
+
+@login_required
 @permission_required('alliancetools.corp_level_alliance_tools')
 @token_required(scopes=STRUCTURES_REQUIRED_SCOPES)
 def alliancetools_add_structures(request, token):
