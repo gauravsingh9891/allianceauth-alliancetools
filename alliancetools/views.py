@@ -535,7 +535,7 @@ def structure_timers(request):
     member_state = State.objects.get(name='Member')
     if request.user.profile.state == member_state:
         events = Structure.objects.select_related('corporation', 'system_name', 'type_name').all()\
-                    .exclude(state="shield_vulnerable").order_by('state_timer_end')
+                    .exclude(state="shield_vulnerable").exclude(state="unanchored").exclude(state="anchoring").exclude(state="anchor_vulnerable").exclude(state="deploy_vulnerable").exclude(state="onlining_vulnerable").order_by('state_timer_end')
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
 
