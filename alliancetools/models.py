@@ -419,6 +419,7 @@ class MiningObserver(models.Model):
 # Corp Mining Observation
 class MiningObservation(models.Model):
     observer = models.ForeignKey(MiningObserver, on_delete=models.CASCADE)
+    char = models.ForeignKey(EveName, on_delete=models.SET_NULL, null=True, default=None)
 
     character_id = models.IntegerField()
     last_updated = models.DateTimeField()

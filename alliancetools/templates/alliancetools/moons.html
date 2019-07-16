@@ -4,7 +4,6 @@
 {% load humanize %}
 {% load alliancetools_tags %}
 {% block at_block %}
-    {% if events %}
         <div class="row ">
             <table id="table-structs" class="table table-hover dataTable">
                 <thead>
@@ -32,14 +31,11 @@
                     {% endfor %} </td>
                 </tr>
                 {% empty %}
-
+                <tr><td colspan="8" class="text-center alert alert-warning text-center">{% trans "No Structures Available" %}</td><td style="display: none;"></td><td style="display: none;"></td><td style="display: none;"></td><td style="display: none;"></td><td style="display: none;"></td><td style="display: none;"></td><td style="display: none;"></td></tr>
                 {% endfor %}
                 </tbody>
             </table>
         </div>
-    {% else %}
-    <div class="alert alert-warning text-center">{% trans "No Structures Available" %}</div>
-    {% endif %}
 {% endblock %}
 {% block extra_javascript %}
     {% include 'bundles/datatables-js.html' %}
@@ -50,7 +46,7 @@
 {% block extra_script %}
     $(document).ready(function() {
         $('#table-structs').DataTable({
-            
+
             "order": [
                 [1, "desc"]
             ],

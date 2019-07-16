@@ -30,7 +30,6 @@
     <div class="alert alert-warning text-center">{% trans "No Info Available" %}</div>
     {% endif %}
 
-
     {% if type_data %}
         <div class="row ">
             <table id="table-ores" class="table table-hover dataTable">
@@ -53,6 +52,40 @@
     {% else %}
     <div class="alert alert-warning text-center">{% trans "No Info Available" %}</div>
     {% endif %}
+
+    {% if player_data %}
+
+        <div class="row ">
+            <table id="table-structs" class="table table-hover dataTable">
+                <thead>
+                    <th class="text-center">Name</th>
+                    <th class="text-center">Corp</th>
+                    <th class="text-center">Total km3</th>
+                    <th class="text-center">Ores</th>
+
+                </thead>
+                <tbody>
+                {% for k, v in player_data.items %}
+                <tr>
+                    <td class="text-center">{{k}}</td>
+                    <td class="text-center">{{v.evename.corp}}</td>
+                    <td class="text-center">{{v.totals|floatformat:2|intcomma}}</td>
+                    <td class="text-center">
+                        {% for k1, v1 in v.ores.items %}
+                        {{k1}} - {{v1|floatformat:2|intcomma}}km3</br>
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% empty %}
+
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+    <div class="alert alert-warning text-center">{% trans "No Info Available" %}</div>
+    {% endif %}
+
 {% endblock %}
 {% block extra_javascript %}
     {% include 'bundles/datatables-js.html' %}

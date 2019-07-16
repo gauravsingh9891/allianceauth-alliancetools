@@ -85,12 +85,11 @@ def _get_new_eve_name(entity_id):
                 result = r.json()
                 new_name.alliance = result[0].get('name')
 
+        new_name.save()
+
         return new_name
     else:
         return False
-
-
-
 
 
 @shared_task
@@ -316,7 +315,7 @@ def update_corp_wallet_journal(character_id, wallet_division, full_update=False)
         if not _transaction.get('id') in existing_id:
             try:
                 if _transaction.get('second_party_id') and _transaction.get('second_party_id') not in name_ids:
-                    _get_new_eve_name(_transaction.get('second_party_id')).save()
+                    _get_new_eve_name(_transaction.get('second_party_id'))
                     name_ids.append(_transaction.get('second_party_id'))
                     second_name = True
                 elif _transaction.get('second_party_id') and _transaction.get('second_party_id') in name_ids:
@@ -326,7 +325,7 @@ def update_corp_wallet_journal(character_id, wallet_division, full_update=False)
 
             try:
                 if _transaction.get('first_party_id') and _transaction.get('first_party_id') not in name_ids:
-                    _get_new_eve_name(_transaction.get('first_party_id')).save()
+                    _get_new_eve_name(_transaction.get('first_party_id'))
                     name_ids.append(_transaction.get('first_party_id'))
                     first_name = True
                 elif _transaction.get('first_party_id') and _transaction.get('first_party_id') in name_ids:
@@ -1512,8 +1511,16 @@ def update_corp_mining_observers(character_id):
                               observer_type=_observer.get('observer_type'))
 
     def _observation_create(_observer, _last_updated, _observer_id):
+        try:
+            char = EveName.objects.get(eve_id=_observer.get('character_id'))
+        except:
+            logging.exception("message")
+            logger.debug("New char: %s" % str(_observer.get('character_id')))
+            char = _get_new_eve_name(_observer.get('character_id'))
+
         return MiningObservation(observer=MiningObserver.objects.get(observer_id=_observer_id),
                               character_id=_observer.get('character_id'),
+                              char = char,
                               last_updated=_last_updated,
                               recorded_corporation_id=_observer.get('recorded_corporation_id'),
                               type_id=_observer.get('type_id'),

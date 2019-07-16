@@ -487,7 +487,16 @@ def fuel_levels(request):
 @login_required
 def extractions(request):
     if request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings'):
-        events = MoonExtractEvent.objects.select_related('structure', 'structure__system_name', 'structure__type_name', 'moon_name', 'notification', 'corp').all()
+        today = datetime.datetime.today().replace(tzinfo= datetime.timezone.utc) -  datetime.timedelta(days=1)
+
+        events = MoonExtractEvent.objects\
+            .select_related('structure',
+                            'structure__system_name',
+                            'structure__type_name',
+                            'moon_name',
+                            'notification',
+                            'corp')\
+            .filter(arrival_time__gte=today)
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
 
@@ -535,7 +544,7 @@ def structure_timers(request):
     member_state = State.objects.get(name='Member')
     if request.user.profile.state == member_state:
         events = Structure.objects.select_related('corporation', 'system_name', 'type_name').all()\
-                    .exclude(state="shield_vulnerable").exclude(state="unanchored").exclude(state="anchoring").exclude(state="anchor_vulnerable").exclude(state="deploy_vulnerable").exclude(state="onlining_vulnerable").order_by('state_timer_end')
+                    .exclude(state="shield_vulnerable").order_by('state_timer_end')
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
 
@@ -551,7 +560,7 @@ def structure_timers(request):
 def observers(request):
     if request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings'):
         types = TypeName.objects.filter(type_id=OuterRef('type_id'))
-        observed = MiningObservation.objects.select_related('observer__structure').all().annotate(type_name=Subquery(types.values('name')))#\
+        observed = MiningObservation.objects.select_related('observer__structure', 'char').all().annotate(type_name=Subquery(types.values('name')))#\
             #.filter(last_updated__gte=datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(days=30))
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
@@ -559,10 +568,30 @@ def observers(request):
 
     ob_data = {}
     type_data = {}
+    player_data = {}
     earliest_date = datetime.datetime.utcnow().replace(tzinfo=timezone.utc)
     total_m3 = 0
+
     for i in observed:
+
+        if i.char.name not in player_data:
+            player_data[i.char.name] = {}
+            player_data[i.char.name]['ores'] = {}
+            player_data[i.char.name]['totals'] = i.quantity/1000
+            player_data[i.char.name]['evename'] = i.char
+        else:
+            player_data[i.char.name]['totals'] = player_data[i.char.name]['totals'] + i.quantity/1000
+            if i.type_name not in player_data[i.char.name]['ores']:
+                player_data[i.char.name]['ores'][i.type_name] = i.quantity/1000
+            else:
+                player_data[i.char.name]['ores'][i.type_name] = player_data[i.char.name]['ores'][i.type_name]+i.quantity/1000
+
         total_m3 = total_m3+i.quantity/1000
+        if i.observer.structure.name not in ob_data:
+            ob_data[i.observer.structure.name] = i.quantity/1000
+        else:
+            ob_data[i.observer.structure.name] = ob_data[i.observer.structure.name]+i.quantity/1000
+
         if i.observer.structure.name not in ob_data:
             ob_data[i.observer.structure.name] = i.quantity/1000
         else:
@@ -576,13 +605,16 @@ def observers(request):
         if earliest_date > i.last_updated:
             earliest_date = i.last_updated
 
+
+
     context = {
         'observed_data': ob_data,
         'type_data': type_data,
         'earliest_date': earliest_date,
+        'player_data': player_data,
         'total_m3': total_m3,
-
     }
+
 
     return render(request, 'alliancetools/observers.html', context=context)
 
