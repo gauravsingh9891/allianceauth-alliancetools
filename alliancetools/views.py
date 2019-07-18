@@ -575,16 +575,16 @@ def observers(request):
     for i in observed:
 
         if i.char.name not in player_data:
-            player_data[i.char.name] = {}
-            player_data[i.char.name]['ores'] = {}
-            player_data[i.char.name]['totals'] = i.quantity/1000
-            player_data[i.char.name]['evename'] = i.char
+            player_data[str(i.char.name)] = {}
+            player_data[str(i.char.name)]['ores'] = {}
+            player_data[str(i.char.name)]['totals'] = i.quantity/1000
+            player_data[str(i.char.name)]['evename'] = i.char
         else:
-            player_data[i.char.name]['totals'] = player_data[i.char.name]['totals'] + i.quantity/1000
-            if i.type_name not in player_data[i.char.name]['ores']:
-                player_data[i.char.name]['ores'][i.type_name] = i.quantity/1000
+            player_data[str(i.char.name)]['totals'] = player_data[str(i.char.name)]['totals'] + i.quantity/1000
+            if i.type_name not in player_data[str(i.char.name)]['ores']:
+                player_data[str(i.char.name)]['ores'][i.type_name] = i.quantity/1000
             else:
-                player_data[i.char.name]['ores'][i.type_name] = player_data[i.char.name]['ores'][i.type_name]+i.quantity/1000
+                player_data[str(i.char.name)]['ores'][i.type_name] = player_data[str(i.char.name)]['ores'][i.type_name]+i.quantity/1000
 
         total_m3 = total_m3+i.quantity/1000
         if i.observer.structure.name not in ob_data:
