@@ -598,13 +598,14 @@ def observers(request):
         else:
             player_data[str(i.char.name)]['totals'] = player_data[str(i.char.name)]['totals'] + i.quantity/1000
             player_data[str(i.char.name)]['totals_isk'] = player_data[str(i.char.name)]['totals_isk'] + i.isk_value
-            if i.type_name not in player_data[str(i.char.name)]['ores']:
-                player_data[str(i.char.name)]['ores'][i.type_name] = {}
-                player_data[str(i.char.name)]['ores'][i.type_name]["value"] = i.isk_value
-                player_data[str(i.char.name)]['ores'][i.type_name]["count"] = i.quantity/1000
-            else:
-                player_data[str(i.char.name)]['ores'][i.type_name]["value"] = player_data[str(i.char.name)]['ores'][i.type_name]["value"]+i.isk_value
-                player_data[str(i.char.name)]['ores'][i.type_name]["count"] = player_data[str(i.char.name)]['ores'][i.type_name]["count"]+i.quantity/1000
+            
+        if i.type_name not in player_data[str(i.char.name)]['ores']:
+            player_data[str(i.char.name)]['ores'][i.type_name] = {}
+            player_data[str(i.char.name)]['ores'][i.type_name]["value"] = i.isk_value
+            player_data[str(i.char.name)]['ores'][i.type_name]["count"] = i.quantity/1000
+        else:
+            player_data[str(i.char.name)]['ores'][i.type_name]["value"] = player_data[str(i.char.name)]['ores'][i.type_name]["value"]+i.isk_value
+            player_data[str(i.char.name)]['ores'][i.type_name]["count"] = player_data[str(i.char.name)]['ores'][i.type_name]["count"]+i.quantity/1000
 
         total_m3 = total_m3+i.quantity/1000
         if i.observer.structure.name not in ob_data:
