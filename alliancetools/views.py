@@ -565,9 +565,9 @@ def observers(request):
         types = TypeName.objects.filter(type_id=OuterRef('type_id'))
         type_price = OrePrice.objects.filter(item_id=OuterRef('type_id'))
 
-        observed = MiningObservation.objects.select_related('observer__structure', 'char').all() \
-            .annotate(type_name=Subquery(types.values('name'))) \
-            .annotate(isk_value=ExpressionWrapper(Subquery((type_price.values('price')*F('quantity'))/100, output_field=FloatField())))#\
+        observed = MiningObservation.objects.select_related('observer__structure', 'char').all()\
+            .annotate(type_name=Subquery(types.values('name')))\
+            .annotate(isk_value=ExpressionWrapper(Subquery(type_price.values('price'))*F('quantity')/100, output_field=FloatField()))#\
             #.filter(last_updated__gte=datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(days=30))
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
