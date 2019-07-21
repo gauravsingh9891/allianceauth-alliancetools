@@ -12,7 +12,7 @@
             <table id="table-structs" class="table table-hover dataTable">
                 <thead>
                     <th class="text-center">Citadel</th>
-                    <th class="text-center">Total km3</th>
+                    <th class="text-center">Total Units (x1000)</th>
                 </thead>
                 <tbody>
                 {% for k, v in observed_data.items %}
@@ -31,11 +31,11 @@
     {% endif %}
 
     {% if type_data %}
-        <div class="row ">
+        <div class="row hidden">
             <table id="table-ores" class="table table-hover dataTable">
                 <thead>
                     <th class="text-center">Ore</th>
-                    <th class="text-center">Total km3</th>
+                    <th class="text-center">Total Units (x1000)</th>
                 </thead>
                 <tbody>
                 {% for k, v in type_data.items %}
@@ -53,28 +53,71 @@
     <div class="alert alert-warning text-center">{% trans "No Info Available" %}</div>
     {% endif %}
 
+    {% if price_data %}
+        <div class="row">
+            <table id="table-prices" class="table table-hover dataTable">
+                <thead>
+                    <th class="text-center">Mineral</th>
+                    <th class="text-center">Delve (30d Avg)</th>
+                    <th class="text-center">The Forge (30d Avg)</th>
+                </thead>
+                <tbody>
+                {% for k, v in price_data.items %}
+                <tr>
+                    <td class="text-center">{{k}}</td>
+                    <td class="text-center">{{v.10000060.davg|floatformat:2|intcomma}}</td>
+                    <td class="text-center">{{v.10000002.davg|floatformat:2|intcomma}}</td>
+                </tr>
+                {% empty %}
+
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+    <div class="alert alert-warning text-center">{% trans "No Info Available" %}</div>
+    {% endif %}
+
     {% if player_data %}
 
         <div class="row ">
-            <table id="table-structs" class="table table-hover dataTable">
+            <table id="table-persons" class="table table-hover dataTable">
                 <thead>
-                    <th class="text-center">Name</th>
-                    <th class="text-center">Corp</th>
-                    <th class="text-center">Total km3</th>
-                    <th class="text-center">Ores</th>
-
+                    <th class="text-center" style="vertical-align:middle">Name</th>
+                    <th class="text-center" style="vertical-align:middle">Corp</th>
+                    <th class="text-center" style="vertical-align:middle">Total Units (x1000)</th>
+                    <th class="text-center" style="vertical-align:middle">Total Value</th>
+                    <th class="text-center" style="vertical-align:middle">Ores</th>
                 </thead>
                 <tbody>
                 {% for k, v in player_data.items %}
                 <tr>
-                    <td class="text-center">{{k}}</td>
-                    <td class="text-center">{{v.evename.corp}}</td>
-                    <td class="text-center">{{v.totals|floatformat:2|intcomma}}</td>
-                    <td class="text-center">
+                    <td class="text-center" style="vertical-align:middle">{{k}}</td>
+                    <td class="text-center" style="vertical-align:middle">{{v.evename.corp}}</td>
+                    <td class="text-center" style="vertical-align:middle">{{v.totals|floatformat:2|intcomma}}</td>
+                    <td class="text-center" style="vertical-align:middle">{{v.totals_isk|floatformat:2|intcomma}}</td>
+                    <td class="text-center" style="vertical-align:middle"><table id="tbl-{{v.evename.eve_id}}" class="table dataTable table-hover">
                         {% for k1, v1 in v.ores.items %}
-                        {{k1}} - {{v1|floatformat:2|intcomma}}km3</br>
+                            {% if forloop.first %}
+                                <thead>
+                                    <th class="text-center" style="vertical-align:middle">Ore</th>
+                                    <th class="text-center" style="vertical-align:middle">Units (x1000)</th>
+                                    <th class="text-center" style="vertical-align:middle">Value</th>
+                                </thead>
+                                <tbody>
+                            {% endif %}
+                                <tr class="">
+                                    <td class="text-center" style="width:35%; vertical-align:middle">{{ k1 }}</td>
+                                    <td class="text-center" style="width:35%; vertical-align:middle">{{ v1.count|floatformat:2|intcomma }}</td>
+                                    <td class="text-center" style="width:35%; vertical-align:middle">{{ v1.value|floatformat:2|intcomma }}</td>
+                                </tr>
+                            {% if forloop.last %}
+                                </tbody>
+                            {% endif %}
+                        {% empty %}
+                            <tr colspan="3">No Ores?</tr>
                         {% endfor %}
-                    </td>
+                    </table></td>
                 </tr>
                 {% empty %}
 
@@ -96,18 +139,45 @@
 {% block extra_script %}
     $(document).ready(function() {
         $('#table-structs').DataTable({
-
             "order": [
                 [1, "desc"]
             ],
             "pageLength": 25
         });
         $('#table-ores').DataTable({
-
             "order": [
                 [1, "desc"]
             ],
             "pageLength": 25
         });
+        $('#table-persons').DataTable({
+            "filterDropDown": {
+					columns: [{
+						idx: 1
+                            }]
+            },
+            "order": [
+                [0, "desc"]
+            ],
+            "pageLength": 25
+        });
+        $('#table-prices').DataTable({
+            "order": [
+                [1, "desc"]
+            ],
+            "paging": false,
+        });
+ {% for k, v in player_data.items %}
+            $('#tbl-{{v.evename.eve_id}}').DataTable({
+                    "searching": false,
+                    "paging": false,
+                    "info": false,
+                    "order": [[ 1, "desc" ]],
+                    bootstrap: true
+            });
+        {% endfor %}
+
+
+
     });
 {% endblock %}

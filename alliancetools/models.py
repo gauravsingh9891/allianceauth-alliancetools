@@ -418,7 +418,7 @@ class MiningObserver(models.Model):
 
 # Corp Mining Observation
 class MiningObservation(models.Model):
-    observer = models.ForeignKey(MiningObserver, on_delete=models.CASCADE)
+    observer = models.ForeignKey(MiningObserver, on_delete=models.SET_NULL, null=True, default=None, blank=True)
     char = models.ForeignKey(EveName, on_delete=models.SET_NULL, null=True, default=None)
 
     character_id = models.IntegerField()
@@ -426,4 +426,34 @@ class MiningObservation(models.Model):
     quantity = models.BigIntegerField()
     recorded_corporation_id = models.IntegerField()
     type_id = models.IntegerField()
+
+
+# rented Moon
+class RentedMoon(models.Model):
+    observer = models.ForeignKey(MiningObserver, on_delete=models.SET_NULL, null=True, default=None, blank=True)
+    renter_corp = models.CharField(max_length=500)
+    Moon = models.CharField(max_length=500)
+    renter_contact = models.CharField(max_length=500)
+    date_start = models.DateTimeField()
+    date_end = models.DateTimeField(null=True, default=None, blank=True)
+
+
+# Market History ( GMetrics )
+class MarketHistory(models.Model):
+    item = models.ForeignKey(TypeName, on_delete=models.DO_NOTHING)
+
+    min = models.DecimalField(max_digits=20, decimal_places=2)
+    max = models.DecimalField(max_digits=20, decimal_places=2)
+    avg = models.DecimalField(max_digits=20, decimal_places=2)
+
+    move = models.BigIntegerField()
+    orders = models.IntegerField()
+    region_id = models.IntegerField()
+    date = models.DateTimeField()
+
+# Market History ( GMetrics )
+class OrePrice(models.Model):
+    item = models.ForeignKey(TypeName, on_delete=models.DO_NOTHING)
+    price = models.DecimalField(max_digits=20, decimal_places=2)
+    last_update = models.DateTimeField(auto_now=True)
 

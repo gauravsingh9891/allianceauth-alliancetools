@@ -14,9 +14,12 @@ from django.utils import timezone
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.db.models import Subquery, OuterRef
+from django.db.models import Avg
+from django.db.models import FloatField, F, ExpressionWrapper
 
 from .models import AllianceToolCharacter, Structure, CorpAsset, AllianceToolJob, AllianceToolJobComment, \
-    NotificationPing, Poco, EveName, Notification, MapSolarSystem, TypeName, MoonExtractEvent, MiningObservation
+    NotificationPing, Poco, EveName, Notification, MapSolarSystem, TypeName, MoonExtractEvent, MiningObservation, \
+    MarketHistory, OrePrice
 from .forms import AddJob, AddComment, EditJob
 from .tasks import _get_new_eve_name
 from easyaudit.models import CRUDEvent
@@ -560,11 +563,23 @@ def structure_timers(request):
 def observers(request):
     if request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings'):
         types = TypeName.objects.filter(type_id=OuterRef('type_id'))
-        observed = MiningObservation.objects.select_related('observer__structure', 'char').all().annotate(type_name=Subquery(types.values('name')))#\
+        type_price = OrePrice.objects.filter(item_id=OuterRef('type_id'))
+
+        observed = MiningObservation.objects.select_related('observer__structure', 'char').all()\
+            .annotate(type_name=Subquery(types.values('name')))\
+            .annotate(isk_value=ExpressionWrapper(Subquery((type_price.values('price')*F('quantity'))/100, output_field=FloatField()))#\
             #.filter(last_updated__gte=datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(days=30))
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
 
+    today = datetime.datetime.today().replace(tzinfo=datetime.timezone.utc) - datetime.timedelta(days=30)
+    pdata = MarketHistory.objects.filter(date__gte=today).values('item__name', 'region_id').annotate(davg=Avg('avg'))
+    price_data = {}
+    for pd in pdata:
+        if pd['item__name'] not in price_data:
+            price_data[pd['item__name']] = {}
+        if pd['region_id'] not in price_data[pd['item__name']]:
+            price_data[pd['item__name']][pd['region_id']] = pd
 
     ob_data = {}
     type_data = {}
@@ -578,13 +593,18 @@ def observers(request):
             player_data[str(i.char.name)] = {}
             player_data[str(i.char.name)]['ores'] = {}
             player_data[str(i.char.name)]['totals'] = i.quantity/1000
+            player_data[str(i.char.name)]['totals_isk'] = i.isk_value
             player_data[str(i.char.name)]['evename'] = i.char
         else:
             player_data[str(i.char.name)]['totals'] = player_data[str(i.char.name)]['totals'] + i.quantity/1000
+            player_data[str(i.char.name)]['totals_isk'] = player_data[str(i.char.name)]['totals_isk'] + i.isk_value
             if i.type_name not in player_data[str(i.char.name)]['ores']:
-                player_data[str(i.char.name)]['ores'][i.type_name] = i.quantity/1000
+                player_data[str(i.char.name)]['ores'][i.type_name] = {}
+                player_data[str(i.char.name)]['ores'][i.type_name]["value"] = i.isk_value
+                player_data[str(i.char.name)]['ores'][i.type_name]["count"] = i.quantity/1000
             else:
-                player_data[str(i.char.name)]['ores'][i.type_name] = player_data[str(i.char.name)]['ores'][i.type_name]+i.quantity/1000
+                player_data[str(i.char.name)]['ores'][i.type_name]["value"] = player_data[str(i.char.name)]['ores'][i.type_name]["value"]+i.isk_value
+                player_data[str(i.char.name)]['ores'][i.type_name]["count"] = player_data[str(i.char.name)]['ores'][i.type_name]["count"]+i.quantity/1000
 
         total_m3 = total_m3+i.quantity/1000
         if i.observer.structure.name not in ob_data:
@@ -610,6 +630,7 @@ def observers(request):
     context = {
         'observed_data': ob_data,
         'type_data': type_data,
+        'price_data': price_data,
         'earliest_date': earliest_date,
         'player_data': player_data,
         'total_m3': total_m3,

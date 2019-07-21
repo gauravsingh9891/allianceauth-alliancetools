@@ -5,7 +5,7 @@ from celery import shared_task
 from .models import CorpAsset, ItemName, TypeName, Structure, Notification, CorporationWalletJournalEntry, \
     CorporationWalletDivision, AllianceToolCharacter, StructureService, BridgeOzoneLevel, MapSolarSystem, EveName, \
     NotificationAlert, NotificationPing, Poco, PocoCelestial, AssetLocation, MoonExtractEvent, MiningObservation, \
-    MiningObserver
+    MiningObserver, MarketHistory, OrePrice
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Token
 from .esi_workaround import EsiResponseClient
@@ -14,6 +14,7 @@ from django.db import transaction, IntegrityError
 from allianceauth.services.tasks import QueueOnce
 from django.db.models import Sum
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+from xml.etree import ElementTree
 
 import bz2
 import re
@@ -1624,4 +1625,600 @@ def update_corp_mining_observers(character_id):
 
 
     return "Finished observers for: %s" % (str(character_id))
+
+
+@shared_task
+def update_ore_prices():
+    #url in config
+    url = "https://goonmetrics.apps.goonswarm.org/api/price_history/?region_id=10000058&type_id=34,35,36,37,38,39,40,16634,16643,16647,16641,16640,16650,16635,16648,16633,16646,16651,16644,16652,16639,16636,16649,16638,16653,16637,16642,11399"
+    response = requests.get(url)
+    price_cache = {}
+    tree = ElementTree.fromstring(response.content)
+    print("Fountain")
+    for item in tree[0]:
+        for history in item:
+            ob, created = MarketHistory.objects.update_or_create(item_id=int(item.attrib['id']),
+                                                   date=datetime.datetime.strptime(history.attrib['date'], '%Y-%m-%d').replace(tzinfo=timezone.utc),
+                                                   region_id=10000058,
+                                                   defaults={'min': history.attrib['minPrice'],
+                                                             'max': history.attrib['maxPrice'],
+                                                             'avg': history.attrib['avgPrice'],
+                                                             'move': history.attrib['movement'],
+                                                             'orders': history.attrib['numOrders']})
+            if ob.item.name not in price_cache:
+                price_cache[ob.item.name] = {}
+            price_cache[ob.item.name]['fountain'] = float(ob.avg)
+
+    print("Forge")
+    url = "https://goonmetrics.apps.goonswarm.org/api/price_history/?region_id=10000002&type_id=34,35,36,37,38,39,40,16634,16643,16647,16641,16640,16650,16635,16648,16633,16646,16651,16644,16652,16639,16636,16649,16638,16653,16637,16642,11399"
+    response = requests.get(url)
+    tree = ElementTree.fromstring(response.content)
+    for item in tree[0]:
+        for history in item:
+            ob, created = MarketHistory.objects.update_or_create(item_id=int(item.attrib['id']),
+                                                       date=datetime.datetime.strptime(history.attrib['date'], '%Y-%m-%d').replace(tzinfo=timezone.utc),
+                                                       region_id=10000002,
+                                                       defaults={'min': history.attrib['minPrice'],
+                                                                 'max': history.attrib['maxPrice'],
+                                                                 'avg': history.attrib['avgPrice'],
+                                                                 'move': history.attrib['movement'],
+                                                                 'orders': history.attrib['numOrders']})
+            if ob.item.name not in price_cache:
+                price_cache[ob.item.name] = {}
+            price_cache[ob.item.name]['the_forge'] = float(ob.avg)
+
+    print("Delve")
+    url = "https://goonmetrics.apps.goonswarm.org/api/price_history/?region_id=10000060&type_id=34,35,36,37,38,39,40,16634,16643,16647,16641,16640,16650,16635,16648,16633,16646,16651,16644,16652,16639,16636,16649,16638,16653,16637,16642,11399"
+    response = requests.get(url)
+    tree = ElementTree.fromstring(response.content)
+    for item in tree[0]:
+        for history in item:
+            ob, created = MarketHistory.objects.update_or_create(item_id=int(item.attrib['id']),
+                                                   date=datetime.datetime.strptime(history.attrib['date'], '%Y-%m-%d').replace(
+                                                       tzinfo=timezone.utc),
+                                                   region_id=10000060,
+                                                   defaults={'min': history.attrib['minPrice'],
+                                                             'max': history.attrib['maxPrice'],
+                                                             'avg': history.attrib['avgPrice'],
+                                                             'move': history.attrib['movement'],
+                                                             'orders': history.attrib['numOrders']})
+            if ob.item.name not in price_cache:
+                price_cache[ob.item.name] = {}
+            price_cache[ob.item.name]['delve'] = float(ob.avg)
+
+    ores = {  "Cobaltite": {
+                "Cobalt": 40,
+                "Mexallon": 500,
+                "Pyerite": 10000,
+                "Tritanium": 7500
+              },
+              "Copious Cobaltite": {
+                "Cobalt": 46,
+                "Mexallon": 575,
+                "Pyerite": 11500,
+                "Tritanium": 8625
+              },
+              "Twinkling Cobaltite": {
+                "Cobalt": 80,
+                "Mexallon": 1000,
+                "Pyerite": 20000,
+                "Tritanium": 15000
+              },
+              "Euxenite": {
+                "Scandium": 40,
+                "Mexallon": 500,
+                "Pyerite": 7500,
+                "Tritanium": 10000
+              },
+              "Copious Euxenite": {
+                "Scandium": 46,
+                "Mexallon": 575,
+                "Pyerite": 8625,
+                "Tritanium": 11500
+              },
+              "Twinkling Euxenite": {
+                "Scandium": 80,
+                "Mexallon": 1000,
+                "Pyerite": 15000,
+                "Tritanium": 20000
+              },
+              "Scheelite": {
+                "Tungsten": 40,
+                "Mexallon": 500,
+                "Pyerite": 5000,
+                "Tritanium": 12500
+              },
+              "Copious Scheelite": {
+                "Tungsten": 46,
+                "Mexallon": 650,
+                "Pyerite": 5750,
+                "Tritanium": 14375
+              },
+              "Twinkling Scheelite": {
+                "Tungsten": 80,
+                "Mexallon": 1000,
+                "Pyerite": 10000,
+                "Tritanium": 25000
+              },
+              "Titanite": {
+                "Titanium": 40,
+                "Mexallon": 500,
+                "Pyerite": 2500,
+                "Tritanium": 15000
+              },
+              "Copious Titanite": {
+                "Titanium": 46,
+                "Mexallon": 575,
+                "Pyerite": 2875,
+                "Tritanium": 17250
+              },
+              "Twinkling Titanite": {
+                "Titanium": 80,
+                "Mexallon": 1000,
+                "Pyerite": 5000,
+                "Tritanium": 30000
+              },
+              "Loparite": {
+                "Hydrocarbons": 20,
+                "Platinum": 10,
+                "Promethium": 22,
+                "Scandium": 20,
+                "Megacyte": 50,
+                "Zydrine": 200,
+                "Nocxium": 100
+              },
+              "Bountiful Loparite": {
+                "Hydrocarbons": 23,
+                "Platinum": 12,
+                "Promethium": 25,
+                "Scandium": 23,
+                "Megacyte": 58,
+                "Zydrine": 230,
+                "Nocxium": 115
+              },
+              "Shining Loparite": {
+                "Hydrocarbons": 40,
+                "Platinum": 20,
+                "Promethium": 44,
+                "Scandium": 40,
+                "Megacyte": 100,
+                "Zydrine": 400,
+                "Nocxium": 200
+              },
+              "Monazite": {
+                "Chromium": 10,
+                "Evaporite Deposits": 20,
+                "Neodymium": 22,
+                "Tungsten": 20,
+                "Megacyte": 150,
+                "Zydrine": 150,
+                "Nocxium": 50
+              },
+              "Bountiful Monazite": {
+                "Chromium": 12,
+                "Evaporite Deposits": 23,
+                "Neodymium": 25,
+                "Tungsten": 23,
+                "Megacyte": 173,
+                "Zydrine": 173,
+                "Nocxium": 58
+              },
+              "Shining Monazite": {
+                "Chromium": 20,
+                "Evaporite Deposits": 40,
+                "Neodymium": 44,
+                "Tungsten": 40,
+                "Megacyte": 300,
+                "Zydrine": 300,
+                "Nocxium": 100
+              },
+              "Xenotime": {
+                "Atmospheric Gases": 20,
+                "Cobalt": 20,
+                "Dysprosium": 22,
+                "Vanadium": 10,
+                "Megacyte": 50,
+                "Zydrine": 100,
+                "Nocxium": 200
+              },
+              "Bountiful Xenotime": {
+                "Atmospheric Gases": 23,
+                "Cobalt": 23,
+                "Dysprosium": 25,
+                "Vanadium": 12,
+                "Megacyte": 58,
+                "Zydrine": 115,
+                "Nocxium": 230
+              },
+              "Shining Xenotime": {
+                "Atmospheric Gases": 40,
+                "Cobalt": 40,
+                "Dysprosium": 44,
+                "Vanadium": 20,
+                "Megacyte": 100,
+                "Zydrine": 200,
+                "Nocxium": 400
+              },
+              "Ytterbite": {
+                "Cadmium": 10,
+                "Silicates": 20,
+                "Titanium": 20,
+                "Thulium": 22,
+                "Megacyte": 200,
+                "Zydrine": 100,
+                "Nocxium": 50
+              },
+              "Bountiful Ytterbite": {
+                "Cadmium": 12,
+                "Silicates": 23,
+                "Titanium": 23,
+                "Thulium": 25,
+                "Megacyte": 230,
+                "Zydrine": 115,
+                "Nocxium": 58
+              },
+              "Shining Ytterbite": {
+                "Cadmium": 20,
+                "Silicates": 40,
+                "Titanium": 40,
+                "Thulium": 44,
+                "Megacyte": 400,
+                "Zydrine": 200,
+                "Nocxium": 100
+              },
+              "Carnotite": {
+                "Atmospheric Gases": 15,
+                "Cobalt": 10,
+                "Technetium": 50,
+                "Zydrine": 50,
+                "Isogen": 1250,
+                "Mexallon": 1000
+              },
+              "Replete Carnotite": {
+                "Atmospheric Gases": 17,
+                "Cobalt": 12,
+                "Technetium": 58,
+                "Zydrine": 58,
+                "Isogen": 1438,
+                "Mexallon": 1150
+              },
+              "Glowing Carnotite": {
+                "Atmospheric Gases": 30,
+                "Cobalt": 20,
+                "Technetium": 100,
+                "Zydrine": 100,
+                "Isogen": 2500,
+                "Mexallon": 2000
+              },
+              "Cinnabar": {
+                "Evaporite Deposits": 15,
+                "Mercury": 50,
+                "Tungsten": 10,
+                "Megacyte": 50,
+                "Isogen": 750,
+                "Mexallon": 1500
+              },
+              "Replete Cinnabar": {
+                "Evaporite Deposits": 17,
+                "Mercury": 58,
+                "Tungsten": 12,
+                "Megacyte": 58,
+                "Isogen": 863,
+                "Mexallon": 1725
+              },
+              "Glowing Cinnabar": {
+                "Evaporite Deposits": 30,
+                "Mercury": 100,
+                "Tungsten": 20,
+                "Megacyte": 100,
+                "Isogen": 1500,
+                "Mexallon": 3000
+              },
+              "Pollucite": {
+                "Caesium": 50,
+                "Hydrocarbons": 15,
+                "Scandium": 10,
+                "Zydrine": 50,
+                "Isogen": 1000,
+                "Mexallon": 1250
+              },
+              "Replete Pollucite": {
+                "Caesium": 58,
+                "Hydrocarbons": 17,
+                "Scandium": 12,
+                "Zydrine": 58,
+                "Isogen": 1150,
+                "Mexallon": 1438
+              },
+              "Glowing Pollucite": {
+                "Caesium": 100,
+                "Hydrocarbons": 30,
+                "Scandium": 20,
+                "Zydrine": 100,
+                "Isogen": 2000,
+                "Mexallon": 2500
+              },
+              "Zircon": {
+                "Hafnium": 50,
+                "Silicates": 15,
+                "Titanium": 10,
+                "Megacyte": 50,
+                "Isogen": 500,
+                "Mexallon": 1750
+              },
+              "Replete Zircon": {
+                "Hafnium": 58,
+                "Silicates": 17,
+                "Titanium": 12,
+                "Megacyte": 58,
+                "Isogen": 575,
+                "Mexallon": 2013
+              },
+              "Glowing Zircon": {
+                "Hafnium": 100,
+                "Silicates": 30,
+                "Titanium": 20,
+                "Megacyte": 100,
+                "Isogen": 1000,
+                "Mexallon": 3500
+              },
+              "Bitumens": {
+                "Hydrocarbons": 65,
+                "Mexallon": 400,
+                "Pyerite": 6000,
+                "Tritanium": 6000
+              },
+              "Brimful Bitumens": {
+                "Hydrocarbons": 75,
+                "Mexallon": 460,
+                "Pyerite": 6900,
+                "Tritanium": 6900
+              },
+              "Glistening Bitumens": {
+                "Hydrocarbons": 130,
+                "Mexallon": 800,
+                "Pyerite": 12000,
+                "Tritanium": 12000
+              },
+              "Coesite": {
+                "Silicates": 65,
+                "Mexallon": 400,
+                "Pyerite": 2000,
+                "Tritanium": 10000
+              },
+              "Brimful Coesite": {
+                "Silicates": 75,
+                "Mexallon": 460,
+                "Pyerite": 2300,
+                "Tritanium": 11500
+              },
+              "Glistening Coesite": {
+                "Silicates": 130,
+                "Mexallon": 800,
+                "Pyerite": 4000,
+                "Tritanium": 20000
+              },
+              "Sylvite": {
+                "Evaporite Deposits": 65,
+                "Mexallon": 400,
+                "Pyerite": 4000,
+                "Tritanium": 8000
+              },
+              "Brimful Sylvite": {
+                "Evaporite Deposits": 75,
+                "Mexallon": 460,
+                "Pyerite": 4600,
+                "Tritanium": 9200
+              },
+              "Glistening Sylvite": {
+                "Evaporite Deposits": 130,
+                "Mexallon": 800,
+                "Pyerite": 8000,
+                "Tritanium": 16000
+              },
+              "Zeolites": {
+                "Atmospheric Gases": 65,
+                "Mexallon": 400,
+                "Pyerite": 8000,
+                "Tritanium": 4000
+              },
+              "Brimful Zeolites": {
+                "Atmospheric Gases": 75,
+                "Mexallon": 460,
+                "Pyerite": 9200,
+                "Tritanium": 4600
+              },
+              "Glistening Zeolites": {
+                "Atmospheric Gases": 130,
+                "Mexallon": 800,
+                "Pyerite": 16000,
+                "Tritanium": 8000
+              },
+              "Chromite": {
+                "Chromium": 40,
+                "Hydrocarbons": 10,
+                "Nocxium": 50,
+                "Isogen": 750,
+                "Mexallon": 1250,
+                "Pyerite": 5000
+              },
+              "Lavish Chromite": {
+                "Chromium": 46,
+                "Hydrocarbons": 12,
+                "Nocxium": 58,
+                "Isogen": 863,
+                "Mexallon": 1438,
+                "Pyerite": 5750
+              },
+              "Shimmering Chromite": {
+                "Chromium": 80,
+                "Hydrocarbons": 20,
+                "Nocxium": 100,
+                "Isogen": 1500,
+                "Mexallon": 2500,
+                "Pyerite": 10000
+              },
+              "Otavite": {
+                "Atmospheric Gases": 10,
+                "Cadmium": 40,
+                "Nocxium": 50,
+                "Isogen": 500,
+                "Mexallon": 1500,
+                "Tritanium": 5000
+              },
+              "Lavish Otavite": {
+                "Atmospheric Gases": 12,
+                "Cadmium": 46,
+                "Nocxium": 58,
+                "Isogen": 575,
+                "Mexallon": 1725,
+                "Tritanium": 5750
+              },
+              "Shimmering Otavite": {
+                "Atmospheric Gases": 20,
+                "Cadmium": 80,
+                "Nocxium": 100,
+                "Isogen": 1000,
+                "Mexallon": 3000,
+                "Tritanium": 10000
+              },
+              "Sperrylite": {
+                "Evaporite Deposits": 10,
+                "Platinum": 40,
+                "Zydrine": 50,
+                "Isogen": 1000,
+                "Mexallon": 1000,
+                "Tritanium": 5000
+              },
+              "Lavish Sperrylite": {
+                "Evaporite Deposits": 12,
+                "Platinum": 46,
+                "Zydrine": 58,
+                "Isogen": 1250,
+                "Mexallon": 1250,
+                "Tritanium": 5750
+              },
+              "Shimmering Sperrylite": {
+                "Evaporite Deposits": 20,
+                "Platinum": 80,
+                "Zydrine": 100,
+                "Isogen": 2000,
+                "Mexallon": 2000,
+                "Tritanium": 10000
+              },
+              "Vanadinite": {
+                "Silicates": 10,
+                "Vanadium": 40,
+                "Zydrine": 50,
+                "Isogen": 1250,
+                "Mexallon": 750,
+                "Pyerite": 5000
+              },
+              "Lavish Vanadinite": {
+                "Silicates": 12,
+                "Vanadium": 46,
+                "Zydrine": 58,
+                "Isogen": 1438,
+                "Mexallon": 863,
+                "Pyerite": 5750
+              },
+              "Shimmering Vanadinite": {
+                "Silicates": 20,
+                "Vanadium": 80,
+                "Zydrine": 100,
+                "Isogen": 2500,
+                "Mexallon": 1500,
+                "Pyerite": 10000
+              },
+              "Flawless Arkonor": {
+                "Megacyte": 368,
+                "Mexallon": 2875,
+                "Tritanium": 25300
+              },
+              "Cubic Bistot": {
+                "Megacyte": 115,
+                "Zydrine": 518,
+                "Pyerite": 13800
+              },
+              "Pellucid Crokite": {
+                "Zydrine": 155,
+                "Nocxium": 874,
+                "Tritanium": 24150
+              },
+              "Jet Ochre": {
+                "Nocxium": 138,
+                "Isogen": 1840,
+                "Tritanium": 11500
+              },
+              "Brilliant Gneiss": {
+                "Isogen": 345,
+                "Mexallon": 2760,
+                "Pyerite": 2530
+              },
+              "Lustrous Hedbergite": {
+                "Zydrine": 22,
+                "Nocxium": 115,
+                "Isogen": 230,
+                "Pyerite": 1150
+              },
+              "Scintillating Hemorphite": {
+                "Zydrine": 17,
+                "Nocxium": 138,
+                "Isogen": 115,
+                "Tritanium": 2530
+              },
+              "Immaculate Jaspet": {
+                "Zydrine": 9,
+                "Nocxium": 86,
+                "Mexallon": 403
+              },
+              "Resplendant Kernite": {
+                "Isogen": 154,
+                "Mexallon": 307,
+                "Tritanium": 154
+              },
+              "Platinoid Omber": {
+                "Isogen": 98,
+                "Pyerite": 115,
+                "Tritanium": 920
+              },
+              "Sparkling Plagioclase": {
+                "Mexallon": 123,
+                "Pyerite": 245,
+                "Tritanium": 123
+              },
+              "Opulent Pyroxeres": {
+                "Nocxium": 6,
+                "Mexallon": 58,
+                "Pyerite": 29,
+                "Tritanium": 404
+              },
+              "Glossy Scordite": {
+                "Pyerite": 398,
+                "Tritanium": 199
+              },
+              "Dazzling Spodumain": {
+                "Isogen": 518,
+                "Mexallon": 2415,
+                "Pyerite": 13858,
+                "Tritanium": 64400
+              },
+              "Stable Veldspar": {
+                "Tritanium": 477
+              }
+            }
+
+    refine_yield = 0.893
+    price_source = 'the_forge'
+    #print(price_cache)
+    for ore, minerals in ores.items():
+        #print(ore)
+
+        price = 0
+        for mineral, qty in minerals.items():
+            price = price + ( refine_yield * qty * price_cache[mineral][price_source] )
+        OrePrice.objects.update_or_create(item=TypeName.objects.get(name=ore),
+                                          defaults={
+                                            "price":price
+                                          })
 
