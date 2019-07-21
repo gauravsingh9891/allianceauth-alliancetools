@@ -586,6 +586,7 @@ def observers(request):
     player_data = {}
     earliest_date = datetime.datetime.utcnow().replace(tzinfo=timezone.utc)
     total_m3 = 0
+    total_isk = 0
 
     for i in observed:
 
@@ -598,7 +599,7 @@ def observers(request):
         else:
             player_data[str(i.char.name)]['totals'] = player_data[str(i.char.name)]['totals'] + i.quantity/1000
             player_data[str(i.char.name)]['totals_isk'] = player_data[str(i.char.name)]['totals_isk'] + i.isk_value
-            
+
         if i.type_name not in player_data[str(i.char.name)]['ores']:
             player_data[str(i.char.name)]['ores'][i.type_name] = {}
             player_data[str(i.char.name)]['ores'][i.type_name]["value"] = i.isk_value
@@ -608,15 +609,14 @@ def observers(request):
             player_data[str(i.char.name)]['ores'][i.type_name]["count"] = player_data[str(i.char.name)]['ores'][i.type_name]["count"]+i.quantity/1000
 
         total_m3 = total_m3+i.quantity/1000
+        total_isk = total_isk+i.isk_value
         if i.observer.structure.name not in ob_data:
-            ob_data[i.observer.structure.name] = i.quantity/1000
+            ob_data[i.observer.structure.name] = {}
+            ob_data[i.observer.structure.name]['qty'] = i.quantity/1000
+            ob_data[i.observer.structure.name]['isk'] = i.isk_value
         else:
-            ob_data[i.observer.structure.name] = ob_data[i.observer.structure.name]+i.quantity/1000
-
-        if i.observer.structure.name not in ob_data:
-            ob_data[i.observer.structure.name] = i.quantity/1000
-        else:
-            ob_data[i.observer.structure.name] = ob_data[i.observer.structure.name]+i.quantity/1000
+            ob_data[i.observer.structure.name]['qty'] = ob_data[i.observer.structure.name]['qty']+i.quantity/1000
+            ob_data[i.observer.structure.name]['isk'] = ob_data[i.observer.structure.name]['isk']+i.isk_value
 
         if i.type_name not in type_data:
             type_data[i.type_name] = i.quantity/1000
@@ -635,6 +635,7 @@ def observers(request):
         'earliest_date': earliest_date,
         'player_data': player_data,
         'total_m3': total_m3,
+        'total_isk': total_isk,
     }
 
 

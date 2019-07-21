@@ -4,8 +4,8 @@
 {% load humanize %}
 {% load alliancetools_tags %}
 {% block at_block %}
-    <h2 class="text-center">Last 60 Days Mining</h2>
-    <p class="text-center">Begining at: {{earliest_date|date:"Y-m-d"}} <br> Total km3: {{total_m3|floatformat:2|intcomma}}</p>
+    <h2 class="text-center">Mining Ledger!</h2>
+    <p class="text-center">Begining at: {{earliest_date|date:"Y-m-d"}} <br> Total Value: {{total_isk|floatformat:2|intcomma}}</p>
     {% if observed_data %}
 
         <div class="row ">
@@ -13,12 +13,14 @@
                 <thead>
                     <th class="text-center">Citadel</th>
                     <th class="text-center">Total Units (x1000)</th>
+                    <th class="text-center">Total Isk</th>
                 </thead>
                 <tbody>
                 {% for k, v in observed_data.items %}
                 <tr>
                     <td class="text-center">{{k}}</td>
-                    <td class="text-center">{{v|floatformat:2|intcomma}}</td>
+                    <td class="text-center">{{v.qty|floatformat:2|intcomma}}</td>
+                    <td class="text-center">{{v.isk|floatformat:2|intcomma}}</td>
                 </tr>
                 {% empty %}
 
