@@ -59,7 +59,7 @@
                     {% for contract in contracts %}
                         <tr>
                             <td> {{ contract.date_issued|date:"Y-m-d" }} </td>
-                            <td> {{ contract.issuer_name.name }} </td>
+                            <td> {{ contract.issuer_name.name }}<br><span class="label label-info">{{ contract.issuer_name.corp }}[{{ contract.issuer_name.alliance }}]</span></td>
                             <td> {{ contract.start_location_name.name }} </td>
                             <td> {{ contract.title }}<br><span class="label label-info">&lt;url=contract:30000142//{{contract.contract_id}}&gt;Click here [Item Exchange]&lt;/url&gt;</span></td>
                             <td> {{ contract.price|floatformat:2|intcomma }} </td>
