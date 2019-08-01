@@ -732,4 +732,4 @@ def str_txfrs(request):
     context = {
         'notifs': notification_list
     }
-    return render(request, 'alliancetools/structure_txfr.html', context=context)
+    return render(request, 'alliancetools/structures_txfr.html', context=context)
