@@ -2,6 +2,7 @@ import logging
 import datetime
 import json
 import yaml
+import requests
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
@@ -19,7 +20,7 @@ from django.db.models import FloatField, F, ExpressionWrapper
 
 from .models import AllianceToolCharacter, Structure, CorpAsset, AllianceToolJob, AllianceToolJobComment, \
     NotificationPing, Poco, EveName, Notification, MapSolarSystem, TypeName, MoonExtractEvent, MiningObservation, \
-    MarketHistory, OrePrice
+    MarketHistory, OrePrice, PublicContractItem, PublicContract
 from .forms import AddJob, AddComment, EditJob
 from .tasks import _get_new_eve_name
 from easyaudit.models import CRUDEvent
@@ -386,14 +387,13 @@ def str_txfr(request):
             logging.exception("Messsage")
             name_ob = _get_new_eve_name(notification_data['newOwnerCorpID'])
             new_owner = name_ob.name
-            name_ob.save()
+
         try:
             old_owner = EveName.objects.get(eve_id=notification_data['oldOwnerCorpID']).name
         except:
             logging.exception("Messsage")
             name_ob = _get_new_eve_name(notification_data['oldOwnerCorpID'])
             old_owner = name_ob.name
-            name_ob.save()
 
         notification_list.append({"old_owner":old_owner,
                                   "new_owner":new_owner,
@@ -642,3 +642,94 @@ def observers(request):
     return render(request, 'alliancetools/observers.html', context=context)
 
 
+@login_required
+def view_contracts(request):
+    contracts_all = PublicContract.objects.all()\
+        .order_by('-date_issued')\
+        .prefetch_related('publiccontractitem_set','publiccontractitem_set__type_name').select_related('issuer_name', 'start_location_name')
+    ctx = {
+        'contracts': contracts_all,
+        'update_task': 'update_character_contracts',
+        'update_backtrace': 'view_character_contracts',
+    }
+    return render(request, 'alliancetools/pub_contracts.html', ctx)
+
+
+def do_eve_prasial(request, structure_id=None):
+    types = TypeName.objects.filter(type_id=OuterRef('type_id'))
+    fitting = CorpAsset.objects.filter(location_id=structure_id).annotate(type_name=Subquery(types.values('name')))
+    fit = ""
+    if fitting.count() < 1:
+        messages.error(request, ('No Fitting for Strucutre!'))
+        return redirect('alliancetools:dashboard')
+    else:
+        for item in fitting:
+            fit=fit+"%s %s\n" %(str(item.type_name), str(item.quantity))
+    try:
+        structure = Structure.objects.get(structure_id=structure_id)
+        fit = fit + "%s" % (str(structure.type_name.name))
+    except:
+        logging.exception("message")
+        messages.error(request, ('Error Finding Structure!'))
+        return redirect('alliancetools:dashboard')
+
+    custom_headers = {'Content-Type': 'application/json', "User-Agent": "INIT."}
+    r = requests.post("https://evepraisal.com/appraisal.json?market=jita",
+                  headers=custom_headers,
+                  data=fit)
+    result = r.json()
+
+    return redirect("https://evepraisal.com/a/%s" % result['appraisal']['id'])
+
+
+@login_required
+def str_txfrs(request):
+    if request.user.has_perm('alliancetools.admin_alliance_tools'):
+        thritydp = datetime.datetime.today().replace(tzinfo=datetime.timezone.utc) - datetime.timedelta(days=30)
+        notifs = Notification.objects.filter(character__character__corporation_name__contains="Holding", notification_type='OwnershipTransferred', timestamp__gte=thritydp).exclude(notification_text__contains="structureTypeID: 2233")
+
+    else:
+        raise PermissionDenied('You do not have permission to be here. This has been Logged!')
+
+    notification_list = []
+    for note in notifs:
+        notification_data = yaml.load(note.notification_text)
+
+        # charID: 972559932
+        # newOwnerCorpID: 98514543
+        # oldOwnerCorpID: 98465001
+        # solarSystemID: 30004626
+        # structureID: 1029829977992
+        # structureName: D4KU-5 - ducktales
+        # structureTypeID: 35835
+
+        structure_name = notification_data['structureName']
+
+        new_owner = None
+        old_owner = None
+
+        try:
+            new_owner = EveName.objects.get(eve_id=notification_data['newOwnerCorpID']).name
+        except:
+            logging.exception("Messsage")
+            name_ob = _get_new_eve_name(notification_data['newOwnerCorpID'])
+            new_owner = name_ob.name
+
+        try:
+            old_owner = EveName.objects.get(eve_id=notification_data['oldOwnerCorpID']).name
+        except:
+            logging.exception("Messsage")
+            name_ob = _get_new_eve_name(notification_data['oldOwnerCorpID'])
+            old_owner = name_ob.name
+
+        notification_list.append({"old_owner":old_owner,
+                                  "new_owner":new_owner,
+                                  "name": structure_name,
+                                  "id": notification_data['structureID'],
+                                  "date": note.timestamp
+                                  })
+
+    context = {
+        'notifs': notification_list
+    }
+    return render(request, 'alliancetools/structure_txfr.html', context=context)

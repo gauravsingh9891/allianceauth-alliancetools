@@ -46,6 +46,14 @@
                                     {% if alt.last_update_pocos %}<tr>
                                         <td class="text-left">Pocos</td><td>{{ alt.last_update_pocos|naturaltime }}</td><td>{{ alt.next_update_pocos|naturaltime }}</td>
                                     </tr>{% endif %}
+
+                                    {% if alt.last_update_moons %}<tr>
+                                        <td class="text-left">Moons</td><td>{{ alt.last_update_moons|naturaltime }}</td><td>{{ alt.next_update_moons|naturaltime }}</td>
+                                    </tr>{% endif %}
+
+                                    {% if alt.last_update_moon_obs %}<tr>
+                                        <td class="text-left">Moon Observers</td><td>{{ alt.last_update_moon_obs|naturaltime }}</td><td>{{ alt.next_update_moon_obs|naturaltime }}</td>
+                                    </tr>{% endif %}
                                 </table>
                                 {% else %}
                                     <div class="alert alert-warning text-center">{% trans "Token Not Updated" %}</div>

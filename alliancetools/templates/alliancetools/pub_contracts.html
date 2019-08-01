@@ -1,0 +1,98 @@
+{# repurposed zkill wheel https://github.com/zKillboard/zKillboard #}
+
+{% extends 'alliancetools/base.html' %}
+{% load static %}
+{% load i18n %}
+{% load humanize %}
+{% load alliancetools_tags %}
+
+{% block at_block %}
+    {% for contract in contracts %}
+        {% if contract.contract_type == "item_exchange" %}
+        <div id="{{ contract.contract_id }}Modal" class="modal fade" tabindex="-1" role="dialog">
+            <div class="modal-dialog modal-sm modal-lg modal-xl" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title">{{ contract.title }} ({{ contract.contract_id }})</h4>
+                    </div>
+                    <div class="modal-body">
+                        <table class="table table-hover" id="{{contract.contract_id}}contract_table">
+                            <thead>
+                                <th></th>
+                                <th> Item </th>
+                                <th> Quantity </th>
+                            </thead>
+                            <tbody>
+                                {% for item in contract.publiccontractitem_set.all %}
+                                    <tr>
+                                        <td><img class="img-circle" src="https://image.eveonline.com/Type/{{ item.type_id }}_32.png"></td>
+                                        <td>{{ item.type_name.name }}</td>
+                                        <td>{{ item.quantity }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+    <div class="col-md-12">
+        <div class="panel panel-default">
+            <div class="panel-heading"> Contracts </div>
+            <table class="table table-hover" id="contract_table">
+                <thead>
+                    <th> Issued </th>
+                    <th> Issuer </th>
+                    <th> Location </th>
+                    <th> Title </th>
+                    <th> Price </th>
+                    <th> </th>
+                    <th></th>
+                </thead>
+                <tbody>
+                    {% for contract in contracts %}
+                        <tr>
+                            <td> {{ contract.date_issued|date:"Y-m-d" }} </td>
+                            <td> {{ contract.issuer_name.name }} </td>
+                            <td> {{ contract.start_location_name.name }} </td>
+                            <td> {{ contract.title }}<br><span class="label label-info">&lt;url=contract:30000142//{{contract.contract_id}}&gt;Click here [Item Exchange]&lt;/url&gt;</span></td>
+                            <td> {{ contract.price|floatformat:2|intcomma }} </td>
+                            <td> {% if contract.contract_type == "item_exchange" %}<a href="#" data-toggle="modal" data-target="#{{ contract.contract_id }}Modal"><span class="fa fa-exchange"></span></a>{% elif contract.contract_type == "courier" %} <a href="#"><span class="fa fa-truck" data-toggle="popover" data-placement="top" data-trigger="hover" data-content="{% if contract.start_location_name == None %}{{ contract.start_location_id }}{% else %}{{ contract.start_location_name }}{% endif %} >> {% if contract.end_location_name == None %}{{ contract.end_location_id }}{% else %}{{ contract.end_location_name }}{% endif %}"></span></a> {% endif %}</td>
+                            <td> {% for item in contract.publiccontractitem_set.all %}{{ item.type_name.name }},{% endfor %}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+{% endblock %}
+{% block extra_javascript %}
+    {% include 'bundles/datatables-js.html' %}
+{% endblock %}
+
+{% block extra_script %}
+    $(document).ready(function(){
+        {% for contract in contracts %}
+            $('#{{contract.contract_id}}contract_table').DataTable({
+                "columnDefs": [
+                    { "sortable": false, "targets": [0] }
+                ]});
+        {% endfor %}
+        $('#contract_table').DataTable({
+            "columnDefs": [
+                { "searchable": false, "targets": [5] },
+                { "sortable": false, "targets": [5] },
+                { "visible": false, "targets": [6] }
+            ]});
+
+        $('[data-toggle="popover"]').popover()
+    })
+{% endblock %}
+

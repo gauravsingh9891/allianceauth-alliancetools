@@ -5,16 +5,17 @@ from celery import shared_task
 from .models import CorpAsset, ItemName, TypeName, Structure, Notification, CorporationWalletJournalEntry, \
     CorporationWalletDivision, AllianceToolCharacter, StructureService, BridgeOzoneLevel, MapSolarSystem, EveName, \
     NotificationAlert, NotificationPing, Poco, PocoCelestial, AssetLocation, MoonExtractEvent, MiningObservation, \
-    MiningObserver, MarketHistory, OrePrice
+    MiningObserver, MarketHistory, OrePrice, PublicContract, PublicContractItem, PublicContractSearch
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Token
-from .esi_workaround import EsiResponseClient
+from .esi_workaround import EsiResponseClient, esi_client_factory
 from django.utils import timezone
 from django.db import transaction, IntegrityError
 from allianceauth.services.tasks import QueueOnce
 from django.db.models import Sum
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from xml.etree import ElementTree
+from django.db.models import Q
 
 import bz2
 import re
@@ -983,7 +984,7 @@ def send_discord_pings(self):
                         attacking_char = ""
 
                         try:
-                            attacking_char = eve_name.objects.get(eve_id=notification_data['charID']).name
+                            attacking_char = EveName.objects.get(eve_id=notification_data['charID']).name
                         except:
                             attacking_char = _get_new_eve_name(notification_data['charID']).name
 
@@ -1136,17 +1137,17 @@ def send_discord_pings(self):
                         originator = None
 
                         try:
-                            originator = eve_name.objects.get(eve_id=notification_data['charID']).name
+                            originator = EveName.objects.get(eve_id=notification_data['charID']).name
                         except:
                             originator = _get_new_eve_name(notification_data['charID']).name
 
                         try:
-                            new_owner = eve_name.objects.get(eve_id=notification_data['newOwnerCorpID']).name
+                            new_owner = EveName.objects.get(eve_id=notification_data['newOwnerCorpID']).name
                         except:
                             new_owner = _get_new_eve_name(notification_data['newOwnerCorpID']).name
 
                         try:
-                            old_owner = eve_name.objects.get(eve_id=notification_data['oldOwnerCorpID']).name
+                            old_owner = EveName.objects.get(eve_id=notification_data['oldOwnerCorpID']).name
                         except:
                             old_owner = _get_new_eve_name(notification_data['oldOwnerCorpID']).name
 
@@ -2222,3 +2223,183 @@ def update_ore_prices():
                                             "price":price
                                           })
 
+
+
+@shared_task
+def process_public_contract_items(ids: list):
+    """
+    Takes list of contract ids to fetch items
+    :param ids: list of contract ids to process
+    :return: Nothing of importance
+    """
+    logger.debug("fetching pub contract items")
+
+    c = esi_client_factory(version='latest', response=True)
+
+    bulk_contract_item_list = []
+    for _contract in ids:
+        contract_item=PublicContract.objects.get(contract_id=_contract)
+
+        _items, result = c.Contracts.get_contracts_public_items_contract_id(
+            contract_id=_contract).result()
+        try:
+            for _item in _items:
+                try:
+                    type = TypeName.objects.get(type_id=_item.get('type_id'))
+                except:
+                    type=None
+
+                bulk_contract_item_list.append(
+                    PublicContractItem(
+                        contract=contract_item,
+                        included = _item.get('is_included'),
+                        singleton = _item.get('is_singleton'),
+                        quantity = _item.get('quantity'),
+                        raw_quantity = _item.get('raw_quantity'),
+                        record_id = _item.get('record_id'),
+                        type_id = _item.get('type_id'),
+                        type_name = type
+                )
+            )
+        except:
+            logging.exception('messaage')
+            logger.debug(result)
+            pass
+
+    PublicContractItem.objects.bulk_create(bulk_contract_item_list, batch_size=500)
+
+    return "Completed contract items fetch"
+
+
+@shared_task
+def update_public_contracts(region_id):
+    logger.debug("updating public contracts for: %s" % str(region_id))
+
+    c = esi_client_factory(version='latest', response=True)
+
+    pub_reg = PublicContractSearch.objects.get(region_id=region_id)
+
+    inactive_contracts = list(PublicContract.objects.filter(
+        Q(status__icontains='finished_issuer') | Q(status__icontains='finished_contractor') |
+        Q(status__icontains='finished') | Q(status__icontains='cancelled') | Q(status__icontains='failed') |
+        Q(status__icontains='deleted') | Q(status__icontains='reversed'),
+        pub_region=pub_reg
+        ).values_list('contract_id', flat=True))
+    all_contracts = list(PublicContract.objects.filter(
+        pub_region=pub_reg
+        ).values_list('contract_id', flat=True))
+
+    all_open_contracts = list(PublicContract.objects.filter(
+        pub_region=pub_reg, acceptor_id__isnull=True
+        ).values_list('contract_id', flat=True))
+
+    bulk_contract_ids = []
+    bulk_contract_items = []
+    item_contracts = ['item_exchange', 'auction']
+    contract_page = 1
+    total_pages = 1
+    while contract_page <= total_pages:
+        contracts, result = c.Contracts.get_contracts_public_region_id(region_id=region_id,
+                                                                          page=contract_page).result()
+        total_pages = int(result.headers['X-Pages'])
+        for _contract in contracts:
+            acceptor = None
+            if _contract.get('acceptor_id'):
+                try:
+                    acceptor = EveName.objects.get(eve_id=_contract.get('acceptor_id'))
+                except:
+                    acceptor = _get_new_eve_name(_contract.get('acceptor_id'))
+
+            assignee = None
+            if _contract.get('assignee_id'):
+                try:
+                    assignee = EveName.objects.get(eve_id=_contract.get('assignee_id'))
+                except:
+                    assignee = _get_new_eve_name(_contract.get('assignee_id'))
+
+            issuer_corporation = None
+            if _contract.get('issuer_corporation_id'):
+                try:
+                    issuer_corporation = EveName.objects.get(eve_id=_contract.get('issuer_corporation_id'))
+                except:
+                    issuer_corporation = _get_new_eve_name(_contract.get('issuer_corporation_id'))
+
+            issuer = None
+            if _contract.get('issuer_id'):
+                try:
+                    issuer = EveName.objects.get(eve_id=_contract.get('issuer_id'))
+                except:
+                    issuer = _get_new_eve_name(_contract.get('issuer_id'))
+
+            location = None
+            if _contract.get('start_location_id'):
+                try:
+                    location = Structure.objects.get(structure_id=_contract.get('start_location_id'))
+                except:
+                    pass
+
+            if not _contract.get('contract_id') in all_contracts:
+                bulk_contract_items.append(PublicContract(
+                    pub_region=pub_reg,
+                    acceptor_id=_contract.get('acceptor_id'),
+                    acceptor_name=acceptor,
+                    assignee_id=_contract.get('assignee_id'),
+                    assignee_name=assignee,
+                    availability='public',
+                    buyout=_contract.get('buyout'),
+                    collateral=_contract.get('collateral'),
+                    contract_id=_contract.get('contract_id'),
+                    date_accepted=_contract.get('date_accepted'),
+                    date_completed=_contract.get('date_completed'),
+                    date_expired=_contract.get('date_expired'),
+                    date_issued=_contract.get('date_issued'),
+                    days_to_complete=_contract.get('days_to_complete'),
+                    end_location_id=_contract.get('end_location_id'),
+                    for_corporation=_contract.get('for_corporation'),
+                    issuer_corporation_id=_contract.get('issuer_corporation_id'),
+                    issuer_corporation_name=issuer_corporation,
+                    issuer_id=_contract.get('issuer_id'),
+                    issuer_name=issuer,
+                    price=_contract.get('price'),
+                    reward=_contract.get('reward'),
+                    start_location_id=_contract.get('start_location_id'),
+                    start_location_name=location,
+                    status=_contract.get('status'),
+                    title=_contract.get('title'),
+                    contract_type=_contract.get('type'),
+                    volume=_contract.get('volume')))
+                if _contract.get('type') in item_contracts:
+                    bulk_contract_ids.append(_contract.get('contract_id'))
+
+        contract_page += 1
+
+    PublicContract.objects.bulk_create(bulk_contract_items, batch_size=500)
+
+    # Chunk contracts
+    chunks = [bulk_contract_ids[i:i + 500] for i in range(0, len(bulk_contract_ids), 500)]  # realistically i doubt it
+    for chunk in chunks:
+        # Process chunks of 500
+        process_public_contract_items.delay(chunk)
+
+    #update_eve_names.delay()
+
+    # Location Names
+    #locations = EveName.objects.all().values_list('name_id', flat=True)
+    #stations = ItemName.objects.all().values_list('item_id', flat=True)
+   # locs = list(CharacterContract.objects.filter(character=seat_char).exclude(end_location_id__in=locations)
+                #.exclude(end_location_id__in=stations).values_list('end_location_id', flat=True))
+    #locs += list(CharacterContract.objects.filter(character=seat_char).exclude(start_location_id__in=locations)
+                 #.exclude(start_location_id__in=stations).values_list('start_location_id', flat=True))
+    #locs = set(locs)
+    #locations = []
+    #for loc in locs:
+        #try:
+            #location, result = c.Universe.get_universe_structures_structure_id(structure_id=loc).result()
+            #print(location)
+       # except HTTPForbidden:
+            #continue
+        #location = EveName(name=location['name'], name_id=loc, category='structure')
+       # locations.append(location)
+   # EveName.objects.bulk_create(locations)
+
+    return "Completed contract pre-fetch for: %s" % str(region_id)

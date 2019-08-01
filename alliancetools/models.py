@@ -451,9 +451,81 @@ class MarketHistory(models.Model):
     region_id = models.IntegerField()
     date = models.DateTimeField()
 
+
 # Market History ( GMetrics )
 class OrePrice(models.Model):
     item = models.ForeignKey(TypeName, on_delete=models.DO_NOTHING)
     price = models.DecimalField(max_digits=20, decimal_places=2)
     last_update = models.DateTimeField(auto_now=True)
 
+
+#grabberer
+class PublicContractSearch(models.Model):
+    region_id = models.IntegerField(unique=True)
+    region = models.CharField(max_length=50)
+    last_update_moon_obs = models.DateTimeField(null=True, default=None, blank=True)
+    next_update_wallet = models.DateTimeField(null=True, default=None, blank=True)
+
+    def __str__(self):
+        return "Public Contract Grabber for: %s" % self.region
+
+
+# Contract
+class Contract(models.Model):
+    acceptor_id = models.IntegerField(null=True, default=None)
+    acceptor_name = models.ForeignKey(EveName, on_delete=models.SET_NULL, null=True, default=None, related_name='acceptor')
+    assignee_id = models.IntegerField(null=True, default=None)
+    assignee_name = models.ForeignKey(EveName, on_delete=models.SET_NULL, null=True, default=None, related_name='assignee')
+
+    _avail_enum = Choices('public', 'personal', 'corporation', 'alliance')
+    availability = models.CharField(max_length=11, choices=_avail_enum)
+    buyout = models.DecimalField(max_digits=20, decimal_places=2, null=True, default=None)
+    collateral = models.DecimalField(max_digits=20, decimal_places=2, null=True, default=None)
+    contract_id = models.IntegerField(null=True, default=None)
+    date_accepted = models.DateTimeField(null=True, default=None)
+    date_completed = models.DateTimeField(null=True, default=None)
+    date_expired = models.DateTimeField(null=True, default=None)
+    date_issued = models.DateTimeField(null=True, default=None)
+    days_to_complete = models.IntegerField(null=True, default=None)
+    end_location_id = models.BigIntegerField(null=True, default=None)
+    for_corporation = models.BooleanField(null=True, default=None)
+    issuer_corporation_id = models.IntegerField(null=True, default=None)
+    issuer_corporation_name = models.ForeignKey(EveName, on_delete=models.SET_NULL, null=True, default=None, related_name='issuer_corp')
+    issuer_id = models.IntegerField(null=True, default=None)
+    issuer_name = models.ForeignKey(EveName, on_delete=models.SET_NULL, null=True, default=None, related_name='issuer')
+    price = models.DecimalField(max_digits=20, decimal_places=2, null=True, default=None)
+    reward = models.DecimalField(max_digits=20, decimal_places=2, null=True, default=None)
+    start_location_id = models.BigIntegerField(null=True, default=None)
+    start_location_name = models.ForeignKey(Structure, on_delete=models.SET_NULL, null=True, default=None, related_name='location_name')
+    _status_enum = Choices('outstanding', 'in_progress', 'finished_issuer', 'finished_contractor',
+                           'finished', 'cancelled', 'rejected', 'failed', 'deleted', 'reversed')
+    status = models.CharField(max_length=11, choices=_status_enum, null=True, default=None)
+    title = models.CharField(max_length=255, null=True, default=None)
+    _type_enum = Choices('unknown', 'item_exchange', 'auction', 'courier', 'loan')
+    contract_type = models.CharField(max_length=18, choices=_type_enum)
+    volume = models.DecimalField(max_digits=30, decimal_places=2, null=True, default=None)
+
+    class Meta:
+        abstract = True
+
+
+class PublicContract(Contract):
+    pub_region = models.ForeignKey(PublicContractSearch, on_delete=models.CASCADE)
+
+
+
+class ContractItem(models.Model):
+    included = models.BooleanField(null=True, default=None)
+    singleton = models.BooleanField(null=True, default=None)
+    quantity = models.IntegerField(null=True, default=None)
+    raw_quantity = models.IntegerField(null=True, default=None)
+    record_id = models.BigIntegerField(null=True, default=None)
+    type_id = models.IntegerField(null=True, default=None)
+    type_name = models.ForeignKey(TypeName, on_delete=models.CASCADE, null=True, default=None)
+
+    class Meta:
+        abstract = True
+
+
+class PublicContractItem(ContractItem):
+    contract = models.ForeignKey(PublicContract, on_delete=models.CASCADE)
