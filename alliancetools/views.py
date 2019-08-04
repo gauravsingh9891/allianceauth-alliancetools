@@ -725,6 +725,7 @@ def str_txfrs(request):
         notification_list.append({"old_owner":old_owner,
                                   "new_owner":new_owner,
                                   "name": structure_name,
+                                  "type": TypeName.objects.get(type_id=notification_data['structureTypeID']),
                                   "id": notification_data['structureID'],
                                   "date": note.timestamp
                                   })
