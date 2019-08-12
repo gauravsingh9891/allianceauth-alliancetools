@@ -18,7 +18,7 @@
                 <tbody>
                 {% for notif in notifs %}
                 <tr>
-                    <td class="text-center">{{ notif.date|date:"Y-m-d" }}</td>
+                    <td class="text-center">{{ notif.date|date:"Y-m-d h:i" }}</td>
                     <td class="text-center">{{ notif.old_owner }}</td>
                     <td class="text-center">{{ notif.new_owner }}</td>
                     <td class="text-center">{{ notif.name }}<br><a href="{% url 'alliancetools:do_eve_prasial' notif.id %}">Appraisal Link</a></td>
@@ -54,7 +54,8 @@
                             }],
                     bootstrap: true
             },
-            "pageLength": 25
+            "pageLength": 25,
+            "order": [[ 0, "desc" ]]
         });
     });
 {% endblock %}

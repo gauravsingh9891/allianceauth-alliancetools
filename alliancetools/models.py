@@ -513,7 +513,6 @@ class PublicContract(Contract):
     pub_region = models.ForeignKey(PublicContractSearch, on_delete=models.CASCADE)
 
 
-
 class ContractItem(models.Model):
     included = models.BooleanField(null=True, default=None)
     singleton = models.BooleanField(null=True, default=None)
@@ -529,3 +528,14 @@ class ContractItem(models.Model):
 
 class PublicContractItem(ContractItem):
     contract = models.ForeignKey(PublicContract, on_delete=models.CASCADE)
+
+
+class ApiKey(models.Model):
+    api_hash = models.CharField(max_length=255, null=True, default=None)
+    name = models.CharField(max_length=255, null=True, default=None)
+
+
+class ApiKeyLog(models.Model):
+    apikey = models.ForeignKey(ApiKey, on_delete=models.CASCADE)
+    date_accessed = models.DateTimeField(auto_now=True)
+

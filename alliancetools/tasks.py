@@ -409,11 +409,11 @@ def update_corp_wallet_journal(character_id, wallet_division, full_update=False)
             _j_ob = journal_db_update(transaction, _division, last_thrity, name_ids)
             if _j_ob:
                 bulk_wallet_items.append(_j_ob)  # return'd values not needed
-            else:
+            #else:
                 # old!
-                if not full_update:
-                    wallet_page = total_pages
-                    break
+            #    if not full_update:
+            #        wallet_page = total_pages
+            #        break
 
         wallet_page += 1
 
