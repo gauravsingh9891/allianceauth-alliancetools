@@ -307,6 +307,8 @@ def update_systems_from_sde():
 @shared_task
 def update_corp_wallet_journal(character_id, wallet_division, full_update=False):  # pagnated results
     logger.debug("Started wallet trans for: %s (%s)" % (str(character_id), str(wallet_division)))
+    if datetime.datetime.now().hour == 14 and datetime.datetime.now().day == 1:
+        full_update = True
 
     def journal_db_update(_transaction, _division, existing_id, name_ids):
         # print("Length Eid's: %s" % str(len(existing_id)))
@@ -393,7 +395,7 @@ def update_corp_wallet_journal(character_id, wallet_division, full_update=False)
     wallet_page = 1
     total_pages = 1
     name_ids = list(EveName.objects.all().values_list('eve_id', flat=True))
-    last_thrity = list(CorporationWalletJournalEntry.objects.filter(
+    last_thrity = list(CorporationWalletJournalEntry.objects.filter( division=_division,
         date__gt=(datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(days=60))).values_list(
         'entry_id', flat=True))
     while wallet_page <= total_pages:
@@ -409,11 +411,11 @@ def update_corp_wallet_journal(character_id, wallet_division, full_update=False)
             _j_ob = journal_db_update(transaction, _division, last_thrity, name_ids)
             if _j_ob:
                 bulk_wallet_items.append(_j_ob)  # return'd values not needed
-            #else:
+            else:
                 # old!
-            #    if not full_update:
-            #        wallet_page = total_pages
-            #        break
+                if not full_update:
+                    wallet_page = total_pages
+                    break
 
         wallet_page += 1
 
