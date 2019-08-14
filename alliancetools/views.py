@@ -20,11 +20,13 @@ from django.db.models import FloatField, F, ExpressionWrapper
 
 from .models import AllianceToolCharacter, Structure, CorpAsset, AllianceToolJob, AllianceToolJobComment, \
     NotificationPing, Poco, EveName, Notification, MapSolarSystem, TypeName, MoonExtractEvent, MiningObservation, \
-    MarketHistory, OrePrice, PublicContractItem, PublicContract
+    MarketHistory, OrePrice, PublicContractItem, PublicContract, ApiKeyLog, ApiKey, RentalInvoice
 from .forms import AddJob, AddComment, EditJob
 from .tasks import _get_new_eve_name
 from easyaudit.models import CRUDEvent
 
+from django.http import Http404, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
 
 CORP_REQUIRED_SCOPES = ['esi-characters.read_notifications.v1',
                         'esi-assets.read_corporation_assets.v1',
@@ -735,3 +737,47 @@ def str_txfrs(request):
     }
     return render(request, 'alliancetools/structures_txfr.html', context=context)
 
+logger = logging.getLogger(__name__)
+
+@csrf_exempt
+def input_json_api(request):
+    try:
+        print("got to here", flush=True)
+        if request.method == "POST":
+            logger.debug("Is Post")
+            api_tokens = list(ApiKey.objects.all().values_list('api_hash', flat=True))
+            logger.debug(api_tokens)
+            if request.META['HTTP_X_API_TOKEN'] in api_tokens:
+                logger.debug("valid")
+                log = ApiKeyLog()
+                log.apikey = ApiKey.objects.get(api_hash = request.META['HTTP_X_API_TOKEN'])
+                data = request.body.decode('utf-8')
+                log.json = "%s" % (data,)
+                log.save()
+
+                received_json_data = json.loads(data)
+                for inv in received_json_data:
+                    invoice = RentalInvoice()
+                    invoice.recipient_id = inv.get('recipient_id')
+                    invoice.character = inv.get('Character')
+                    invoice.corporation = inv.get('Corporation')
+                    invoice.profession_isk = inv.get('ProfessionISK')
+                    invoice.profession_count = inv.get('ProfessionCOUNT')
+                    invoice.moon_isk = inv.get('MoonISK')
+                    invoice.moon_count = inv.get('MoonCOUNT')
+                    invoice.sum_isk = inv.get('SumISK')
+                    invoice.personal_id = inv.get('PersonalID')
+                    invoice.transaction_id = inv.get('TransactionID')
+                    invoice.professions = inv.get('Professions')
+                    invoice.moons = inv.get('Moons')
+                    invoice.save()
+
+                logger.debug(received_json_data)
+                return HttpResponse('ok got it')
+            else:
+                raise Http404
+        else:
+            raise Http404
+    except:
+        logging.exception("Messsage")
+        raise Http404

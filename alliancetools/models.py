@@ -531,11 +531,27 @@ class PublicContractItem(ContractItem):
 
 
 class ApiKey(models.Model):
-    api_hash = models.CharField(max_length=255, null=True, default=None)
+    api_hash = models.CharField(max_length=255, null=True, default=None, unique=True)
     name = models.CharField(max_length=255, null=True, default=None)
 
 
 class ApiKeyLog(models.Model):
     apikey = models.ForeignKey(ApiKey, on_delete=models.CASCADE)
+    json = models.TextField(null=True, default=None)
     date_accessed = models.DateTimeField(auto_now=True)
 
+
+class RentalInvoice(models.Model):
+    recipient_id = models.BigIntegerField(null=True, default=None)
+    character = models.CharField(max_length=255, null=True, default=None)
+    corporation = models.CharField(max_length=255, null=True, default=None)
+    profession_isk = models.DecimalField(max_digits=20, decimal_places=2, null=True, default=None)
+    profession_count = models.IntegerField(null=True, default=None)
+    moon_isk = models.DecimalField(max_digits=20, decimal_places=2, null=True, default=None)
+    moon_count = models.IntegerField(null=True, default=None)
+    sum_isk = models.DecimalField(max_digits=20, decimal_places=2, null=True, default=None)
+    personal_id = models.CharField(max_length=255, null=True, default=None)
+    transaction_id = models.CharField(max_length=255, null=True, default=None)
+    professions = models.TextField(null=True, default=None)
+    moons = models.TextField(null=True, default=None)
+    date_created = models.DateTimeField(auto_now=True)

@@ -28,4 +28,6 @@ urlpatterns = [
     url(r'^edit_job/(?P<job_id>(\d)*)/$', views.edit_job, name='edit_job'),
     url(r'^audit_log/(?P<job_id>(\d)*)/$', views.audit_log, name='audit_log'),
     url(r'^mark_complete/(?P<job_id>(\d)*)/$', views.mark_complete, name='mark_complete'),
+    url(r'^input_json_api/$', views.input_json_api, name='input_json_api'),
+
 ]
