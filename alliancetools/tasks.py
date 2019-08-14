@@ -307,8 +307,8 @@ def update_systems_from_sde():
 @shared_task
 def update_corp_wallet_journal(character_id, wallet_division, full_update=False):  # pagnated results
     logger.debug("Started wallet trans for: %s (%s)" % (str(character_id), str(wallet_division)))
-    if datetime.datetime.now().hour == 14 and datetime.datetime.now().day == 1:
-        full_update = True
+    #if datetime.datetime.now().hour == 14 and datetime.datetime.now().day == 1:
+    #    full_update = True
 
     def journal_db_update(_transaction, _division, existing_id, name_ids):
         # print("Length Eid's: %s" % str(len(existing_id)))
