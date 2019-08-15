@@ -757,20 +757,19 @@ def input_json_api(request):
 
                 received_json_data = json.loads(data)
                 for inv in received_json_data:
-                    invoice = RentalInvoice()
-                    invoice.recipient_id = inv.get('recipient_id')
-                    invoice.character = inv.get('Character')
-                    invoice.corporation = inv.get('Corporation')
-                    invoice.profession_isk = inv.get('ProfessionISK')
-                    invoice.profession_count = inv.get('ProfessionCOUNT')
-                    invoice.moon_isk = inv.get('MoonISK')
-                    invoice.moon_count = inv.get('MoonCOUNT')
-                    invoice.sum_isk = inv.get('SumISK')
-                    invoice.personal_id = inv.get('PersonalID')
-                    invoice.transaction_id = inv.get('TransactionID')
-                    invoice.professions = inv.get('Professions')
-                    invoice.moons = inv.get('Moons')
-                    invoice.save()
+                    invoice, created = RentalInvoice.objects.update_or_create(
+                        transaction_id = inv.get('TransactionID'),
+                        defaults = {'recipient_id': inv.get('recipient_id'),
+                                    'character' : inv.get('Character'),
+                                    'corporation' : inv.get('Corporation'),
+                                    'profession_isk' : inv.get('ProfessionISK'),
+                                    'profession_count' : inv.get('ProfessionCOUNT'),
+                                    'moon_isk' : inv.get('MoonISK'),
+                                    'moon_count' : inv.get('MoonCOUNT'),
+                                    'sum_isk' : inv.get('SumISK'),
+                                    'personal_id' : inv.get('PersonalID'),
+                                    'professions' : inv.get('Professions'),
+                                    'moons' : inv.get('Moons')})
 
                 logger.debug(received_json_data)
                 return HttpResponse('ok got it')
