@@ -11,7 +11,7 @@
         </div>
         <div class="row">
             <table class="flex-container flex-wrap">
-                {% now "Y-m-d" as todays_date %}
+                {% now "Y-m-d-h:i" as todays_date %}
                 {% if alts %}
                     <table class="table table-hover" id="table">
                         <thead>
@@ -33,13 +33,13 @@
                                 <td class="text-center" style="vertical-align:middle"><img class="ra-avatar img-circle" src="https://image.eveonline.com/Corporation/{{ alt.character.corporation_id }}_128.png"></td>
                                 <td class="text-center" style="vertical-align:middle"><h4>{{ alt.character.corporation_name }}</h4>
                                 <p>Character: <span class="badge badge-light">{{ alt.character.character_name }}</span></p></td>
-                                <td class="text-center" style="vertical-align:middle">{% if alt.last_update_notifs %}{{ alt.last_update_notifs|date:"Y-m-d" }}<br>{{ alt.last_update_notifs|date:"h:i" }}<br><span class="badge badge-light">{{ alt.next_update_notifs|naturaltime }}{% endif %}</span></td>
-                                <td class="text-center" style="vertical-align:middle">{% if alt.last_update_structs %}{{ alt.last_update_structs|date:"Y-m-d" }}<br>{{ alt.last_update_structs|date:"h:i" }}<br><span class="badge badge-light">{{ alt.next_update_structs|naturaltime }}{% endif %}</span></td>
-                                <td class="text-center" style="vertical-align:middle">{% if alt.last_update_wallet %}{{ alt.last_update_wallet|date:"Y-m-d" }}<br>{{ alt.last_update_wallet|date:"h:i" }}<br><span class="badge badge-light">{{ alt.next_update_wallet|naturaltime }}{% endif %}</span></td>
-                                <td class="text-center" style="vertical-align:middle">{% if alt.last_update_assets %}{{ alt.last_update_assets|date:"Y-m-d" }}<br>{{ alt.last_update_assets|date:"h:i" }}<br><span class="badge badge-light">{{ alt.next_update_assets|naturaltime }}{% endif %}</span></td>
-                                <td class="text-center" style="vertical-align:middle">{% if alt.last_update_pocos %}{{ alt.last_update_pocos|date:"Y-m-d" }}<br>{{ alt.last_update_pocos|date:"h:i" }}<br><span class="badge badge-light">{{ alt.next_update_pocos|naturaltime }}{% endif %}</span></td>
-                                <td class="text-center" style="vertical-align:middle">{% if alt.last_update_moons %}{{ alt.last_update_moons|date:"Y-m-d" }}<br>{{ alt.last_update_moons|date:"h:i" }}<br><span class="badge badge-light">{{ alt.next_update_moons|naturaltime }}{% endif %}</span></td>
-                                <td class="text-center" style="vertical-align:middle">{% if alt.last_update_moon_obs %}{{ alt.last_update_moon_obs|date:"Y-m-d" }}<br>{{ alt.last_update_moon_obs|date:"h:i" }}<br><span class="badge badge-light">{{ alt.next_update_moon_obs|naturaltime }}{% endif %}</span></td>
+                                <td class="text-center" style="vertical-align:middle">{% if alt.last_update_notifs %}{{ alt.last_update_notifs|date:"Y-m-d" }}<br>{{ alt.last_update_notifs|date:"h:i" }}<br><span class="label {% if not alt.next_update_notifs_expired %}label-primary{% else %}label-danger{% endif %}">{{ alt.next_update_notifs|naturaltime }}{% endif %}</span></td>
+                                <td class="text-center" style="vertical-align:middle">{% if alt.last_update_structs %}{{ alt.last_update_structs|date:"Y-m-d" }}<br>{{ alt.last_update_structs|date:"h:i" }}<br><span class="label {% if not alt.next_update_structs_expired %}label-primary{% else %}label-danger{% endif %}">{{ alt.next_update_structs|naturaltime }}{% endif %}</span></td>
+                                <td class="text-center" style="vertical-align:middle">{% if alt.last_update_wallet %}{{ alt.last_update_wallet|date:"Y-m-d" }}<br>{{ alt.last_update_wallet|date:"h:i" }}<br><span class="label {% if not alt.next_update_wallet_expired %}label-primary{% else %}label-danger{% endif %}">{{ alt.next_update_wallet|naturaltime }}{% endif %}</span></td>
+                                <td class="text-center" style="vertical-align:middle">{% if alt.last_update_assets %}{{ alt.last_update_assets|date:"Y-m-d" }}<br>{{ alt.last_update_assets|date:"h:i" }}<br><span class="label {% if not alt.next_update_assets_expired %}label-primary{% else %}label-danger{% endif %}">{{ alt.next_update_assets|naturaltime }}{% endif %}</span></td>
+                                <td class="text-center" style="vertical-align:middle">{% if alt.last_update_pocos %}{{ alt.last_update_pocos|date:"Y-m-d" }}<br>{{ alt.last_update_pocos|date:"h:i" }}<br><span class="label {% if not alt.next_update_pocos_expired %}label-primary{% else %}label-danger{% endif %}">{{ alt.next_update_pocos|naturaltime }}{% endif %}</span></td>
+                                <td class="text-center" style="vertical-align:middle">{% if alt.last_update_moons %}{{ alt.last_update_moons|date:"Y-m-d" }}<br>{{ alt.last_update_moons|date:"h:i" }}<br><span class="label {% if not alt.next_update_moons_expired %}label-primary{% else %}label-danger{% endif %}">{{ alt.next_update_moons|naturaltime }}{% endif %}</span></td>
+                                <td class="text-center" style="vertical-align:middle">{% if alt.last_update_moon_obs %}{{ alt.last_update_moon_obs|date:"Y-m-d" }}<br>{{ alt.last_update_moon_obs|date:"h:i" }}<br><span class="label {% if not alt.next_update_moon_obs_expired %}label-primary{% else %}label-danger{% endif %}">{{ alt.next_update_moon_obs|naturaltime }}{% endif %}</span></td>
                             </tr>
                     {% endfor %}
                          </tbody>

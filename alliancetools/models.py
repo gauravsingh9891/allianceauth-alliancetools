@@ -2,6 +2,7 @@ from django.db import models
 from model_utils import Choices
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from django.contrib.auth.models import Group
+from django.utils import timezone
 
 import json
 
@@ -82,9 +83,57 @@ class AllianceToolCharacter(models.Model):
     next_update_moons = models.DateTimeField(null=True, default=None)
     next_update_moon_obs = models.DateTimeField(null=True, default=None)
 
+    @property
+    def next_update_wallet_expired(self):
+        if self.next_update_wallet:
+            if timezone.now() > self.next_update_wallet:
+                return True
+        return False
+
+    @property
+    def next_update_notifs_expired(self):
+        if self.next_update_notifs:
+            if timezone.now() > self.next_update_notifs:
+                return True
+        return False
+
+    @property
+    def next_update_assets_expired(self):
+        if self.next_update_assets:
+            if timezone.now() > self.next_update_assets:
+                return True
+        return False
+
+    @property
+    def next_update_structs_expired(self):
+        if self.next_update_structs:
+            if timezone.now() > self.next_update_structs:
+                return True
+        return False
+
+    @property
+    def next_update_pocos_expired(self):
+        if self.next_update_pocos:
+            if timezone.now() > self.next_update_pocos:
+                return True
+        return False
+
+    @property
+    def next_update_moons_expired(self):
+        if self.next_update_moons:
+            if timezone.now() > self.next_update_moons:
+                return True
+        return False
+
+    @property
+    def next_update_moon_obs_expired(self):
+        if self.next_update_moon_obs:
+            if timezone.now() > self.next_update_moon_obs:
+                return True
+        return False
+
     def __str__(self):
         return "{}'s AllianceToolCharacter".format(self.character.character_name)
-
 
     class Meta:
         permissions = (('access_alliance_tools', 'Can access alliance_tools'),
