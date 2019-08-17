@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 SWAGGER_SPEC_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'swagger.json')
 # ['esi-characters.read_notifications.v1', 'esi-assets.read_corporation_assets.v1', 'esi-characters.read_corporation_roles.v1', 'esi-wallet.read_corporation_wallets.v1', 'esi-corporations.read_structures.v1', 'esi-universe.read_structures.v1']
 
+maxTries = 10
 
 def _get_token(character_id, scopes):
     try:
@@ -108,16 +109,16 @@ def update_character_notifications(character_id):
         return "Not Tokens"
 
     _count = 0
-    maxTries = 3
     while True:
         try:
             c = EsiResponseClient(token).get_esi_client(response=True)
             break
         except:
             _count += 1
+            logger.debug("Json Schema failed %s" % str(_count))
             if _count == maxTries:
-                logging.exception("Json Schema")
-                raise e
+                raise Exception("Unable to create client")
+            time.sleep(1)
 
     at_char = AllianceToolCharacter.objects.get(character__character_id=character_id)
 
@@ -175,17 +176,16 @@ def update_corp_assets(character_id):
         return "No Tokens"
 
     _count = 0
-    maxTries = 3
     while True:
         try:
             c = EsiResponseClient(token).get_esi_client(response=True)
             break
         except:
             _count += 1
+            logger.debug("Json Schema failed %s" % str(_count))
             if _count == maxTries:
-                logging.exception("Json Schema")
-                raise e
-
+                raise Exception("Unable to create client")
+            time.sleep(1)
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
 
@@ -396,16 +396,16 @@ def update_corp_wallet_journal(character_id, wallet_division, full_update=False)
         return "No Tokens"
 
     _count = 0
-    maxTries = 3
     while True:
         try:
             c = EsiResponseClient(token).get_esi_client(response=True)
             break
         except:
             _count += 1
+            logger.debug("Json Schema failed %s" % str(_count))
             if _count == maxTries:
-                logging.exception("Json Schema")
-                raise e
+                raise Exception("Unable to create client")
+            time.sleep(1)
 
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
@@ -475,16 +475,16 @@ def update_corp_wallet_division(character_id, full_update=False):  # pagnated re
         return "No Tokens"
 
     _count = 0
-    maxTries = 3
     while True:
         try:
             c = token.get_esi_client()
             break
         except:
             _count += 1
+            logger.debug("Json Schema failed %s" % str(_count))
             if _count == maxTries:
-                logging.exception("Json Schema")
-                raise e
+                raise Exception("Unable to create client")
+            time.sleep(1)
 
     # check roles!
     roles = c.Character.get_characters_character_id_roles(character_id=character_id).result()
@@ -582,16 +582,16 @@ def update_corp_structures(character_id):  # pagnated results
         return "No Tokens"
 
     _count = 0
-    maxTries = 3
     while True:
         try:
             c = EsiResponseClient(token).get_esi_client(response=True)
             break
         except:
             _count += 1
+            logger.debug("Json Schema failed %s" % str(_count))
             if _count == maxTries:
-                logging.exception("Json Schema")
-                raise e
+                raise Exception("Unable to create client")
+            time.sleep(1)
 
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
@@ -847,16 +847,16 @@ def run_asset_locations(self):
                         return "No Tokens"
 
                     _count = 0
-                    maxTries = 3
                     while True:
                         try:
                             c = EsiResponseClient(token).get_esi_client(response=True)
                             break
                         except:
                             _count += 1
+                            logger.debug("Json Schema failed %s" % str(_count))
                             if _count == maxTries:
-                                logging.exception("Json Schema")
-                                raise e
+                                raise Exception("Unable to create client")
+                            time.sleep(1)
 
                     structure_info, result = c.Universe.get_universe_structures_structure_id(
                         structure_id=loc.location_id).result()
@@ -1294,16 +1294,16 @@ def update_corp_pocos(character_id):
         return "No Tokens"
 
     _count = 0
-    maxTries = 3
     while True:
         try:
             c = EsiResponseClient(token).get_esi_client(response=True)
             break
         except:
             _count += 1
+            logger.debug("Json Schema failed %s" % str(_count))
             if _count == maxTries:
-                logging.exception("Json Schema")
-                raise e
+                raise Exception("Unable to create client")
+            time.sleep(1)
 
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
@@ -1418,16 +1418,16 @@ def run_moon_exracts(character_id):
         return "No Tokens"
 
     _count = 0
-    maxTries = 3
     while True:
         try:
             c = EsiResponseClient(token).get_esi_client(response=True)
             break
         except:
             _count += 1
+            logger.debug("Json Schema failed %s" % str(_count))
             if _count == maxTries:
-                logging.exception("Json Schema")
-                raise e
+                raise Exception("Unable to create client")
+            time.sleep(1)
 
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
@@ -1636,16 +1636,16 @@ def update_corp_mining_observers(character_id):
         return "No Tokens"
 
     _count = 0
-    maxTries = 3
     while True:
         try:
             c = EsiResponseClient(token).get_esi_client(response=True)
             break
         except:
             _count += 1
+            logger.debug("Json Schema failed %s" % str(_count))
             if _count == maxTries:
-                logging.exception("Json Schema")
-                raise e
+                raise Exception("Unable to create client")
+            time.sleep(1)
 
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
