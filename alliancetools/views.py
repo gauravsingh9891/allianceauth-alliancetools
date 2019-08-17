@@ -72,15 +72,17 @@ def dashboard(request):
             'add_structs': request.user.has_perm('alliancetools.corp_level_alliance_tools')
         }
 
-        return render(request, 'alliancetools/dashboard.html', context=context)
+        if request.user.has_perm('alliancetools.admin_alliance_tools'):
+            return render(request, 'alliancetools/dashboard.html', context=context)
+
+        return render(request, 'alliancetools/dashboard-corp.html', context=context)
+
 
     except:
         logging.exception("message")
 
-    if request.user.has_perm('alliancetools.admin_alliance_tools'):
-        return render(request, 'alliancetools/dashboard.html')
-    else:
-        return render(request, 'alliancetools/dashboard-corp.html')
+    return render(request, 'alliancetools/dashboard.html')
+
 
 
 @login_required
