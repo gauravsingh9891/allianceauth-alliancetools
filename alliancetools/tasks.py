@@ -113,8 +113,9 @@ def update_character_notifications(character_id):
         try:
             c = EsiResponseClient(token).get_esi_client(response=True)
             break
-        except ValidationError as e:
-            if ++_count == maxTries:
+        except:
+            _count += 1
+            if _count == maxTries:
                 logging.exception("Json Schema")
                 raise e
 
@@ -179,8 +180,9 @@ def update_corp_assets(character_id):
         try:
             c = EsiResponseClient(token).get_esi_client(response=True)
             break
-        except ValidationError as e:
-            if ++_count == maxTries:
+        except:
+            _count += 1
+            if _count == maxTries:
                 logging.exception("Json Schema")
                 raise e
 
@@ -399,8 +401,9 @@ def update_corp_wallet_journal(character_id, wallet_division, full_update=False)
         try:
             c = EsiResponseClient(token).get_esi_client(response=True)
             break
-        except ValidationError as e:
-            if ++_count == maxTries:
+        except:
+            _count += 1
+            if _count == maxTries:
                 logging.exception("Json Schema")
                 raise e
 
@@ -477,8 +480,9 @@ def update_corp_wallet_division(character_id, full_update=False):  # pagnated re
         try:
             c = token.get_esi_client()
             break
-        except ValidationError as e:
-            if ++_count == maxTries:
+        except:
+            _count += 1
+            if _count == maxTries:
                 logging.exception("Json Schema")
                 raise e
 
@@ -583,8 +587,9 @@ def update_corp_structures(character_id):  # pagnated results
         try:
             c = EsiResponseClient(token).get_esi_client(response=True)
             break
-        except ValidationError as e:
-            if ++_count == maxTries:
+        except:
+            _count += 1
+            if _count == maxTries:
                 logging.exception("Json Schema")
                 raise e
 
@@ -847,8 +852,9 @@ def run_asset_locations(self):
                         try:
                             c = EsiResponseClient(token).get_esi_client(response=True)
                             break
-                        except ValidationError as e:
-                            if ++_count == maxTries:
+                        except:
+                            _count += 1
+                            if _count == maxTries:
                                 logging.exception("Json Schema")
                                 raise e
 
@@ -1293,8 +1299,9 @@ def update_corp_pocos(character_id):
         try:
             c = EsiResponseClient(token).get_esi_client(response=True)
             break
-        except ValidationError as e:
-            if ++_count == maxTries:
+        except:
+            _count += 1
+            if _count == maxTries:
                 logging.exception("Json Schema")
                 raise e
 
@@ -1416,8 +1423,9 @@ def run_moon_exracts(character_id):
         try:
             c = EsiResponseClient(token).get_esi_client(response=True)
             break
-        except ValidationError as e:
-            if ++_count == maxTries:
+        except:
+            _count += 1
+            if _count == maxTries:
                 logging.exception("Json Schema")
                 raise e
 
@@ -1633,8 +1641,9 @@ def update_corp_mining_observers(character_id):
         try:
             c = EsiResponseClient(token).get_esi_client(response=True)
             break
-        except ValidationError as e:
-            if ++_count == maxTries:
+        except:
+            _count += 1
+            if _count == maxTries:
                 logging.exception("Json Schema")
                 raise e
 
