@@ -1,0 +1,72 @@
+{% extends 'alliancetools/base.html' %}
+{% load i18n %}
+{% load humanize %}
+{% block at_block %}
+    {% if alts %}
+    <div class="container col-sm-12">
+        <div class="row">
+            <div class="col-sm-12 col-md-12 text-center">
+            <h3>Tokens</h3>
+            </div>
+        </div>
+        <div class="row">
+            <div class="flex-container flex-wrap">
+                {% if alts %}
+                    {% for alt in alts%}
+                        <div class=".flex-item text-center col-sm-6 col-md-6">
+                            <img class="ra-avatar img-circle" src="https://image.eveonline.com/Corporation/{{ alt.character.corporation_id }}_128.png">
+                            <h4>{{ alt.character.corporation_name }}</h4>
+                            <div>
+                                <p>Character: <span class="badge badge-light">{{ alt.character.character_name }}</span></p>
+                                {% if alt.last_update_notifs or alt.last_update_structs or alt.last_update_wallet or alt.last_update_assets %}
+                                <table class="table table-hover">
+                                    <thead>
+                                    <tr>
+                                        <th>Update Task</th>
+                                        <th class="text-center">Last Update</th>
+                                        <th class="text-center">Cache Expires</th>
+                                    </tr>
+                                    </thead>
+                                    {% if alt.last_update_notifs %}<tr>
+                                        <td class="text-left">Notifications</td><td>{{ alt.last_update_notifs|naturaltime }}</td><td>{{ alt.next_update_notifs|naturaltime }}</td>
+                                    </tr>{% endif %}
+
+                                    {% if alt.last_update_structs %}<tr>
+                                        <td class="text-left">Structures</td><td>{{ alt.last_update_structs|naturaltime }}</td><td>{{ alt.next_update_structs|naturaltime }}</td>
+                                    </tr>{% endif %}
+
+                                    {% if alt.last_update_wallet %}<tr>
+                                        <td class="text-left">Wallet</td><td>{{ alt.last_update_wallet|naturaltime }}</td><td>{{ alt.next_update_wallet|naturaltime }}</td>
+                                    </tr>{% endif %}
+
+                                    {% if alt.last_update_assets %}<tr>
+                                        <td class="text-left">Assets</td><td>{{ alt.last_update_assets|naturaltime }}</td><td>{{ alt.next_update_assets|naturaltime }}</td>
+                                    </tr>{% endif %}
+
+                                    {% if alt.last_update_pocos %}<tr>
+                                        <td class="text-left">Pocos</td><td>{{ alt.last_update_pocos|naturaltime }}</td><td>{{ alt.next_update_pocos|naturaltime }}</td>
+                                    </tr>{% endif %}
+
+                                    {% if alt.last_update_moons %}<tr>
+                                        <td class="text-left">Moons</td><td>{{ alt.last_update_moons|naturaltime }}</td><td>{{ alt.next_update_moons|naturaltime }}</td>
+                                    </tr>{% endif %}
+
+                                    {% if alt.last_update_moon_obs %}<tr>
+                                        <td class="text-left">Moon Observers</td><td>{{ alt.last_update_moon_obs|naturaltime }}</td><td>{{ alt.next_update_moon_obs|naturaltime }}</td>
+                                    </tr>{% endif %}
+                                </table>
+                                {% else %}
+                                    <div class="alert alert-warning text-center">{% trans "Token Not Updated" %}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning text-center">{% trans "No Tokens Loaded." %}</div>
+    {% endif %}
+
+{% endblock %}

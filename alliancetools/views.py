@@ -77,7 +77,10 @@ def dashboard(request):
     except:
         logging.exception("message")
 
-    return render(request, 'alliancetools/dashboard.html')
+    if request.user.has_perm('alliancetools.admin_alliance_tools'):
+        return render(request, 'alliancetools/dashboard.html')
+    else:
+        return render(request, 'alliancetools/dashboard-corp.html')
 
 
 @login_required
@@ -648,7 +651,7 @@ def observers(request):
 def view_contracts(request):
     contracts_all = PublicContract.objects.all()\
         .order_by('-date_issued')\
-        .prefetch_related('publiccontractitem_set','publiccontractitem_set__type_name').select_related('issuer_name', 'start_location_name')
+        .prefetch_related('publiccontractitem_set','publiccontractitem_set__type_name').select_related('issuer_name', 'start_location_name').limit(100)
     ctx = {
         'contracts': contracts_all,
         'update_task': 'update_character_contracts',
@@ -713,16 +716,20 @@ def str_txfrs(request):
         try:
             new_owner = EveName.objects.get(eve_id=notification_data['newOwnerCorpID']).name
         except:
-            logging.exception("Messsage")
-            name_ob = _get_new_eve_name(notification_data['newOwnerCorpID'])
-            new_owner = name_ob.name
+            try:
+                name_ob = _get_new_eve_name(notification_data['newOwnerCorpID'])
+                new_owner = name_ob.name
+            except:
+                new_owner = "ESI ERROR (%s)" % str(notification_data['newOwnerCorpID'])
 
         try:
             old_owner = EveName.objects.get(eve_id=notification_data['oldOwnerCorpID']).name
         except:
-            logging.exception("Messsage")
-            name_ob = _get_new_eve_name(notification_data['oldOwnerCorpID'])
-            old_owner = name_ob.name
+            try:
+                name_ob = _get_new_eve_name(notification_data['oldOwnerCorpID'])
+                old_owner = name_ob.name
+            except:
+                old_owner = "ESI ERROR (%s)" % str(notification_data['oldOwnerCorpID'])
 
         notification_list.append({"old_owner":old_owner,
                                   "new_owner":new_owner,
@@ -742,13 +749,9 @@ logger = logging.getLogger(__name__)
 @csrf_exempt
 def input_json_api(request):
     try:
-        print("got to here", flush=True)
         if request.method == "POST":
-            logger.debug("Is Post")
             api_tokens = list(ApiKey.objects.all().values_list('api_hash', flat=True))
-            logger.debug(api_tokens)
             if request.META['HTTP_X_API_TOKEN'] in api_tokens:
-                logger.debug("valid")
                 log = ApiKeyLog()
                 log.apikey = ApiKey.objects.get(api_hash = request.META['HTTP_X_API_TOKEN'])
                 data = request.body.decode('utf-8')
@@ -772,7 +775,7 @@ def input_json_api(request):
                                     'moons' : inv.get('Moons')})
 
                 logger.debug(received_json_data)
-                return HttpResponse('ok got it')
+                return HttpResponse('OK')
             else:
                 raise Http404
         else:
@@ -780,3 +783,16 @@ def input_json_api(request):
     except:
         logging.exception("Messsage")
         raise Http404
+
+
+@login_required
+def view_contracts(request):
+    contracts_all = PublicContract.objects.all()\
+        .order_by('-date_issued')\
+        .prefetch_related('publiccontractitem_set','publiccontractitem_set__type_name').select_related('issuer_name', 'start_location_name')
+    ctx = {
+        'contracts': contracts_all,
+        'update_task': 'update_character_contracts',
+        'update_backtrace': 'view_character_contracts',
+    }
+    return render(request, 'alliancetools/pub_contracts.html', ctx)

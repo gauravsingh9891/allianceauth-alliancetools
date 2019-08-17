@@ -122,7 +122,8 @@ class WalletJournalEntry(models.Model):
         abstract = True
         indexes = (
             models.Index(fields=['entry_id']),
-            models.Index(fields=['date'])
+            models.Index(fields=['date']),
+            models.Index(fields=['ref_type'])
         )
 
 

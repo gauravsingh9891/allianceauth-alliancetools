@@ -46,7 +46,20 @@
                        {% if add_tokens %}<li><a href="{% url 'alliancetools:add_moons' %}">{% trans "Add New Moon Token" %}</a></li>{% endif %}
                        {% if add_structs %}<li><a href="{% url 'alliancetools:add_structs' %}">{% trans "Add New Structure Token" %}</a></li>{% endif %}
                     </ul>
+                    <ul class="nav navbar-nav navbar-right">
+                        <li class="dropdown" style="margin-right: 5px">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"> <span class="fa fa-arrow-down"></span> WIP Pages </a>
+                            <ul class="dropdown-menu">
+                                <li><a href="{% url 'alliancetools:fuel' %}">{% trans "Fuel Calcs" %}</a></li>
+                                <li><a href="{% url 'alliancetools:moons' %}">{% trans "Moon Timers" %}</a></li>
+                                <li><a href="{% url 'alliancetools:observers' %}">{% trans "Moon Observers" %}</a></li>
+                                <li><a href="{% url 'alliancetools:contracts' %}">{% trans "Public Contracts" %}</a></li>
+                                <li><a href="{% url 'alliancetools:str_txfr' %}">{% trans "Structure Txfrs" %}</a></li>
+                            </ul>
+                        </li>
+                    </ul>
                 </div>
+
             </nav>{% endif %}
 
             {% block at_block %}{% endblock %}
