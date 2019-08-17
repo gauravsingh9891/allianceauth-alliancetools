@@ -17,6 +17,8 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from xml.etree import ElementTree
 from django.db.models import Q
 
+from jsonschema.exceptions import ValidationError
+
 import bz2
 import re
 import requests
@@ -105,7 +107,16 @@ def update_character_notifications(character_id):
     if not token:
         return "Not Tokens"
 
-    c = EsiResponseClient(token).get_esi_client(response=True)
+    _count = 0
+    maxTries = 3
+    while True:
+        try:
+            c = EsiResponseClient(token).get_esi_client(response=True)
+            break
+        except ValidationError as e:
+            if ++_count == maxTries:
+                logging.exception("Json Schema")
+                raise e
 
     at_char = AllianceToolCharacter.objects.get(character__character_id=character_id)
 
@@ -162,7 +173,17 @@ def update_corp_assets(character_id):
     if not token:
         return "No Tokens"
 
-    c = EsiResponseClient(token).get_esi_client(response=True)
+    _count = 0
+    maxTries = 3
+    while True:
+        try:
+            c = EsiResponseClient(token).get_esi_client(response=True)
+            break
+        except ValidationError as e:
+            if ++_count == maxTries:
+                logging.exception("Json Schema")
+                raise e
+
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
 
@@ -372,7 +393,16 @@ def update_corp_wallet_journal(character_id, wallet_division, full_update=False)
     if not token:
         return "No Tokens"
 
-    c = EsiResponseClient(token).get_esi_client(response=True)
+    _count = 0
+    maxTries = 3
+    while True:
+        try:
+            c = EsiResponseClient(token).get_esi_client(response=True)
+            break
+        except ValidationError as e:
+            if ++_count == maxTries:
+                logging.exception("Json Schema")
+                raise e
 
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
@@ -441,7 +471,16 @@ def update_corp_wallet_division(character_id, full_update=False):  # pagnated re
     if not token:
         return "No Tokens"
 
-    c = token.get_esi_client()
+    _count = 0
+    maxTries = 3
+    while True:
+        try:
+            c = token.get_esi_client()
+            break
+        except ValidationError as e:
+            if ++_count == maxTries:
+                logging.exception("Json Schema")
+                raise e
 
     # check roles!
     roles = c.Character.get_characters_character_id_roles(character_id=character_id).result()
@@ -538,7 +577,16 @@ def update_corp_structures(character_id):  # pagnated results
     if not token:
         return "No Tokens"
 
-    c = EsiResponseClient(token).get_esi_client(response=True)
+    _count = 0
+    maxTries = 3
+    while True:
+        try:
+            c = EsiResponseClient(token).get_esi_client(response=True)
+            break
+        except ValidationError as e:
+            if ++_count == maxTries:
+                logging.exception("Json Schema")
+                raise e
 
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
@@ -793,7 +841,16 @@ def run_asset_locations(self):
                     if not token:
                         return "No Tokens"
 
-                    c = EsiResponseClient(token).get_esi_client(response=True) # lookup the structure
+                    _count = 0
+                    maxTries = 3
+                    while True:
+                        try:
+                            c = EsiResponseClient(token).get_esi_client(response=True)
+                            break
+                        except ValidationError as e:
+                            if ++_count == maxTries:
+                                logging.exception("Json Schema")
+                                raise e
 
                     structure_info, result = c.Universe.get_universe_structures_structure_id(
                         structure_id=loc.location_id).result()
@@ -988,7 +1045,10 @@ def send_discord_pings(self):
                         try:
                             attacking_char = EveName.objects.get(eve_id=notification_data['charID']).name
                         except:
-                            attacking_char = _get_new_eve_name(notification_data['charID']).name
+                            try:
+                                attacking_char = _get_new_eve_name(notification_data['charID']).name
+                            except:
+                                attacking_char = "" #esi is fubar just show nothing
 
                         attackerStr = "*[%s](https://zkillboard.com/search/%s/)*, [%s](https://zkillboard.com/search/%s/), **[%s](https://zkillboard.com/search/%s/)**" % \
                                                                  (attacking_char,
@@ -1141,17 +1201,25 @@ def send_discord_pings(self):
                         try:
                             originator = EveName.objects.get(eve_id=notification_data['charID']).name
                         except:
-                            originator = _get_new_eve_name(notification_data['charID']).name
-
+                            try:
+                                originator = _get_new_eve_name(notification_data['charID']).name
+                            except:
+                                originator = str(notification_data['charID'])
                         try:
                             new_owner = EveName.objects.get(eve_id=notification_data['newOwnerCorpID']).name
                         except:
-                            new_owner = _get_new_eve_name(notification_data['newOwnerCorpID']).name
+                            try:
+                                new_owner = _get_new_eve_name(notification_data['newOwnerCorpID']).name
+                            except:
+                                new_owner = str(notification_data['newOwnerCorpID'])
 
                         try:
                             old_owner = EveName.objects.get(eve_id=notification_data['oldOwnerCorpID']).name
                         except:
-                            old_owner = _get_new_eve_name(notification_data['oldOwnerCorpID']).name
+                            try:
+                                old_owner = _get_new_eve_name(notification_data['oldOwnerCorpID']).name
+                            except:
+                                old_owner = str(notification_data['oldOwnerCorpID'])
 
                         body = "Structure Transfered from %s to %s" % (old_owner, new_owner)
                         timestamp = notification.timestamp
@@ -1219,7 +1287,16 @@ def update_corp_pocos(character_id):
     if not token:
         return "No Tokens"
 
-    c = EsiResponseClient(token).get_esi_client(response=True)
+    _count = 0
+    maxTries = 3
+    while True:
+        try:
+            c = EsiResponseClient(token).get_esi_client(response=True)
+            break
+        except ValidationError as e:
+            if ++_count == maxTries:
+                logging.exception("Json Schema")
+                raise e
 
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
@@ -1255,6 +1332,9 @@ def update_corp_pocos(character_id):
         for structure in structures:
             office_ids.append(structure.get('office_id'))
 
+        if len(office_ids) == 0:
+            break
+
         locations, results = c.Assets.post_corporations_corporation_id_assets_locations(corporation_id=_corporation.corporation_id,
                                                                     item_ids=office_ids).result()
         offices = {}
@@ -1271,7 +1351,7 @@ def update_corp_pocos(character_id):
                          (str(offices.get(structure.get('office_id'))['position'].get('z'))),
                          (str(structure.get('system_id')))
                          )
-                logger.debug(url)
+                #logger.debug(url)
                 r = requests.get(url)
                 fuzz_result = r.json()
 
@@ -1281,7 +1361,7 @@ def update_corp_pocos(character_id):
                 )
             else:
                 celestial = celestial[0]
-                logger.debug(celestial.celestial_name)
+                #logger.debug(celestial.celestial_name)
 
 
             structure_ob = Poco(corp=_corporation,
@@ -1330,7 +1410,16 @@ def run_moon_exracts(character_id):
     if not token:
         return "No Tokens"
 
-    c = EsiResponseClient(token).get_esi_client(response=True)
+    _count = 0
+    maxTries = 3
+    while True:
+        try:
+            c = EsiResponseClient(token).get_esi_client(response=True)
+            break
+        except ValidationError as e:
+            if ++_count == maxTries:
+                logging.exception("Json Schema")
+                raise e
 
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
@@ -1538,7 +1627,17 @@ def update_corp_mining_observers(character_id):
     if not token:
         return "No Tokens"
 
-    c = EsiResponseClient(token).get_esi_client(response=True)
+    _count = 0
+    maxTries = 3
+    while True:
+        try:
+            c = EsiResponseClient(token).get_esi_client(response=True)
+            break
+        except ValidationError as e:
+            if ++_count == maxTries:
+                logging.exception("Json Schema")
+                raise e
+
     # check roles!
     roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
 
