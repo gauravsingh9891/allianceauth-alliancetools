@@ -83,9 +83,25 @@ class JobsMenu(MenuItemHook):
         return ''
 
 
+class ContactsMenu(MenuItemHook):
+    def __init__(self):
+        MenuItemHook.__init__(self, 'Alliance Contacts',
+                              'fa fa-address-card fa-fw',
+                              'alliancetools:contacts',
+                              navactive=['alliancetools:contacts'])
+
+    def render(self, request):
+        if request.user.has_perm('alliancetools.admin_alliance_tools'):
+            return MenuItemHook.render(self, request)
+        return ''
+
 @hooks.register('menu_item_hook')
 def register_menu():
     return AllianceMenu()
+
+@hooks.register('menu_item_hook')
+def register_menu():
+    return ContactsMenu()
 
 @hooks.register('menu_item_hook')
 def register_menu():
