@@ -1,5 +1,7 @@
 from django.template.defaulttags import register
 from ..models import ItemName, TypeName, BridgeOzoneLevel
+import logging
+from django.utils.safestring import mark_safe
 
 
 @register.filter
@@ -67,3 +69,24 @@ def item_image(type_id):
 @register.filter(name='addclass')
 def addclass(value, arg):
     return value.as_widget(attrs={'class': arg})
+
+@register.filter()
+def standing_span(standing):
+    try:
+
+        if standing > 0:
+            if standing <= 5:
+                return mark_safe('<span class="label label-info">{}</span>'.format(standing))
+            else:
+                return mark_safe('<span class="label label-primary">{}</span>'.format(standing))
+        elif standing < 0:
+            if standing >= -5:
+                return mark_safe('<spam class="label label-warning">{}</span>'.format(standing))
+            else:
+                return mark_safe('<span class="label label-danger">{}</span>'.format(standing))
+        else:
+            return mark_safe('<span class="label label-default">{}</span>'.format(standing))
+
+    except:
+        logging.exception("Messsage")
+        return ""

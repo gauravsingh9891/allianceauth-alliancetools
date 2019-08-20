@@ -5,8 +5,9 @@ from celery import shared_task
 from .models import CorpAsset, ItemName, TypeName, Structure, Notification, CorporationWalletJournalEntry, \
     CorporationWalletDivision, AllianceToolCharacter, StructureService, BridgeOzoneLevel, MapSolarSystem, EveName, \
     NotificationAlert, NotificationPing, Poco, PocoCelestial, AssetLocation, MoonExtractEvent, MiningObservation, \
-    MiningObserver, MarketHistory, OrePrice, PublicContract, PublicContractItem, PublicContractSearch
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+    MiningObserver, MarketHistory, OrePrice, PublicContract, PublicContractItem, PublicContractSearch, AllianceContact, \
+    AllianceContactLabel
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo, EveAllianceInfo
 from esi.models import Token
 from .esi_workaround import EsiResponseClient, esi_client_factory
 from django.utils import timezone
@@ -2513,3 +2514,80 @@ def update_public_contracts(region_id):
    # EveName.objects.bulk_create(locations)
 
     return "Completed contract pre-fetch for: %s" % str(region_id)
+
+
+@shared_task
+def update_alliance_contacts(character_id):
+    logger.debug("updating alliance contacts for: %s" % str(character_id))
+
+    def _update_contact_db(_alliance, _contact):
+        _contact_item, _created = AllianceContact.objects \
+            .update_or_create(alliance=_alliance, contact_id=_contact.get('contact_id'),
+                              defaults={'contact_type': _contact.get('contact_type'),
+                                        'standing': _contact.get('standing')})
+
+        if _contact.get('label_ids', False):  # add labels
+            for _label in _contact.get('label_ids'):
+                _contact_item.labels.add(AllianceContactLabel.objects.get(alliance=_alliance, label_id=_label))
+
+            _contact_item.save()
+
+    req_scopes = ['esi-alliances.read_contacts.v1']
+
+    token = _get_token(character_id, req_scopes)
+    _count = 0
+    while True:
+        try:
+            c = EsiResponseClient(token).get_esi_client(response=True)
+            break
+        except:
+            _count += 1
+            logger.debug("Json Schema failed %s" % str(_count))
+            if _count == maxTries:
+                raise Exception("Unable to create client")
+            time.sleep(1)
+
+    _character = AllianceToolCharacter.objects.get(character__character_id=character_id)
+    _alliance = EveAllianceInfo.objects.get(alliance_id=_character.character.alliance_id)
+    labels, result = c.Contacts.get_alliances_alliance_id_contacts_labels(alliance_id=_character.character.alliance_id).result()
+    label_id_filter = []
+
+    for label in labels:  # update labels
+        label_id_filter.append(label.get('label_id'))
+        label_item, created = AllianceContactLabel.objects \
+            .update_or_create(alliance=_alliance, label_id=label.get('label_id'),
+                              defaults={'label_name': label.get('label_name')})
+
+    contact_page = 1
+    total_pages = 1
+    contact_ids = []
+    while contact_page <= total_pages:  # get all the pages...
+        contacts_page, result = c.Contacts.get_alliances_alliance_id_contacts(alliance_id=_character.character.alliance_id,
+                                                                                        page=contact_page).result()
+        total_pages = int(result.headers['X-Pages'])
+
+        for contact in contacts_page:  # update contacts
+            contact_ids.append(contact.get('contact_id'))
+            _update_contact_db(_alliance, contact)
+
+        contact_page += 1
+
+    AllianceContact.objects.filter(alliance=_alliance).exclude(
+        contact_id__in=contact_ids).delete()  # delete old stuff
+    AllianceContactLabel.objects.filter(alliance=_alliance).exclude(label_id__in=label_id_filter).delete()
+
+
+
+@shared_task
+def trim_old_data():
+    characters = AllianceToolCharacter.objects.all()
+
+    corp_ids = []
+    for c in characters:
+        if c.character.corporation_id not in corp_ids:
+            corp_ids.append(c.character.corporation_id)
+
+    Structure.objects.all().exclude(corporation__corporation_id__in=corp_ids).delete()
+    CorporationWalletDivision.objects.all().exclude(corporation__corporation_id__in=corp_ids).delete()
+    Poco.objects.all().exclude(corp__corporation_id__in=corp_ids).delete()
+    MoonExtractEvent.objects.all().exclude(corp__corporation_id__in=corp_ids).delete()

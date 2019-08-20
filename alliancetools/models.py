@@ -1,6 +1,6 @@
 from django.db import models
 from model_utils import Choices
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo, EveAllianceInfo
 from django.contrib.auth.models import Group
 from django.utils import timezone
 
@@ -41,6 +41,7 @@ class MapSolarSystem(models.Model):
     xMin = models.FloatField()
     xMax = models.FloatField()
     yMin = models.FloatField()
+    yMin = models.FloatField()
     yMax = models.FloatField()
     zMin = models.FloatField()
     zMax = models.FloatField()
@@ -74,6 +75,7 @@ class AllianceToolCharacter(models.Model):
     last_update_pocos = models.DateTimeField(null=True, default=None)
     last_update_moons = models.DateTimeField(null=True, default=None)
     last_update_moon_obs = models.DateTimeField(null=True, default=None)
+    last_update_contact = models.DateTimeField(null=True, default=None)
 
     next_update_wallet = models.DateTimeField(null=True, default=None)
     next_update_notifs = models.DateTimeField(null=True, default=None)
@@ -82,6 +84,7 @@ class AllianceToolCharacter(models.Model):
     next_update_pocos = models.DateTimeField(null=True, default=None)
     next_update_moons = models.DateTimeField(null=True, default=None)
     next_update_moon_obs = models.DateTimeField(null=True, default=None)
+    next_update_contact = models.DateTimeField(null=True, default=None)
 
     @property
     def next_update_wallet_expired(self):
@@ -129,6 +132,13 @@ class AllianceToolCharacter(models.Model):
     def next_update_moon_obs_expired(self):
         if self.next_update_moon_obs:
             if timezone.now() > self.next_update_moon_obs:
+                return True
+        return False
+
+    @property
+    def next_update_contact_expired(self):
+        if self.next_update_contact:
+            if timezone.now() > self.next_update_contact:
                 return True
         return False
 
@@ -605,3 +615,59 @@ class RentalInvoice(models.Model):
     professions = models.TextField(null=True, default=None)
     moons = models.TextField(null=True, default=None)
     date_created = models.DateTimeField(auto_now=True)
+
+
+class Contact(models.Model):
+
+    contact_id = models.BigIntegerField(null=True, default=None)
+    _avail_enum = Choices('faction', 'character', 'corporation', 'alliance')
+    contact_type = models.CharField(max_length=15, choices=_avail_enum, null=True, default=None)
+
+    standing = models.DecimalField(max_digits=5, decimal_places=2, null=True, default=None)
+
+    class Meta:
+        abstract = True
+
+
+class ContactLabel(models.Model):
+    label_id = models.BigIntegerField()
+    label_name = models.CharField(max_length=255, null=False)
+
+    class Meta:
+        abstract = True
+
+
+class CorporateContactLabel(ContactLabel):
+    corporation = models.ForeignKey(EveCorporationInfo, on_delete=models.CASCADE)
+
+
+class AllianceContactLabel(ContactLabel):
+    alliance = models.ForeignKey(EveAllianceInfo, on_delete=models.CASCADE)
+
+
+class CorporateContact(Contact):
+    corp = models.ForeignKey(EveCorporationInfo, on_delete=models.CASCADE, related_name='at_corp_contact')
+
+    is_watched = models.NullBooleanField()
+    labels = models.ManyToManyField(CorporateContactLabel)
+
+    @property
+    def is_watched(self):
+        if self.watched:
+            return True
+        else:
+            return False
+
+
+class AllianceContact(Contact):
+    alliance = models.ForeignKey(EveAllianceInfo, on_delete=models.CASCADE, related_name='at_alli_contact')
+
+    labels = models.ManyToManyField(AllianceContactLabel)
+
+    @property
+    def is_watched(self):
+        if self.watched:
+            return True
+        else:
+            return False
+

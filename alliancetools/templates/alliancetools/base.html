@@ -44,6 +44,7 @@
                        {% if add_tokens %}<li><a href="{% url 'alliancetools:add_char' %}">{% trans "Add New Token" %}</a></li>{% endif %}
                        {% if add_tokens %}<li><a href="{% url 'alliancetools:add_poco' %}">{% trans "Add New Poco Token" %}</a></li>{% endif %}
                        {% if add_tokens %}<li><a href="{% url 'alliancetools:add_moons' %}">{% trans "Add New Moon Token" %}</a></li>{% endif %}
+                       {% if add_tokens %}<li><a href="{% url 'alliancetools:add_contacts' %}">{% trans "Add New Contacts Token" %}</a></li>{% endif %}
                        {% if add_structs %}<li><a href="{% url 'alliancetools:add_structs' %}">{% trans "Add New Structure Token" %}</a></li>{% endif %}
                     </ul>
                     {% if perms.alliancetoolbox.admin_alliance_tools %}

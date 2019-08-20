@@ -8,7 +8,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
 from django.contrib import messages
 from esi.decorators import token_required
-from allianceauth.eveonline.models import EveCharacter
+from allianceauth.eveonline.models import EveCharacter, EveAllianceInfo
 from allianceauth.authentication.models import UserProfile, State
 from django.db import IntegrityError
 from django.utils import timezone
@@ -20,7 +20,7 @@ from django.db.models import FloatField, F, ExpressionWrapper
 
 from .models import AllianceToolCharacter, Structure, CorpAsset, AllianceToolJob, AllianceToolJobComment, \
     NotificationPing, Poco, EveName, Notification, MapSolarSystem, TypeName, MoonExtractEvent, MiningObservation, \
-    MarketHistory, OrePrice, PublicContractItem, PublicContract, ApiKeyLog, ApiKey, RentalInvoice
+    MarketHistory, OrePrice, PublicContractItem, PublicContract, ApiKeyLog, ApiKey, RentalInvoice, AllianceContact
 from .forms import AddJob, AddComment, EditJob
 from .tasks import _get_new_eve_name
 from easyaudit.models import CRUDEvent
@@ -42,6 +42,8 @@ POCO_REQUIRED_SCOPES = ['esi-planets.read_customs_offices.v1',
                         'esi-characters.read_corporation_roles.v1',
                         'esi-assets.read_corporation_assets.v1']
 
+CONTACTS_REQUIRED_SCOPES = ['esi-alliances.read_contacts.v1',
+                            'esi-corporations.read_contacts.v1']
 
 STRUCTURES_REQUIRED_SCOPES = ['esi-corporations.read_structures.v1',
                               'esi-universe.read_structures.v1',
@@ -108,6 +110,20 @@ def jobs_board(request):
 @permission_required('alliancetools.admin_alliance_tools')
 @token_required(scopes=CORP_REQUIRED_SCOPES)
 def alliancetools_add_char(request, token):
+    try:
+        AllianceToolCharacter.objects.get_or_create(character=EveCharacter.objects.get(character_id=token.character_id))
+        return redirect('alliancetools:dashboard')
+
+    except:
+        messages.error(request, ('Error Adding Character!'))
+
+    return redirect('alliancetools:dashboard')
+
+
+@login_required
+@permission_required('alliancetools.admin_alliance_tools')
+@token_required(scopes=CONTACTS_REQUIRED_SCOPES)
+def alliancetools_add_contacts(request, token):
     try:
         AllianceToolCharacter.objects.get_or_create(character=EveCharacter.objects.get(character_id=token.character_id))
         return redirect('alliancetools:dashboard')
@@ -793,8 +809,33 @@ def view_contracts(request):
         .order_by('-date_issued')\
         .prefetch_related('publiccontractitem_set','publiccontractitem_set__type_name').select_related('issuer_name', 'start_location_name')
     ctx = {
-        'contracts': contracts_all,
-        'update_task': 'update_character_contracts',
-        'update_backtrace': 'view_character_contracts',
+        'contracts': contracts_all
     }
     return render(request, 'alliancetools/pub_contracts.html', ctx)
+
+
+@login_required
+def view_contacts(request):
+    if request.user.has_perm('alliancetools.admin_alliance_tools'):
+        all_contacts = AllianceContact.objects.all()
+    else:
+        raise PermissionDenied('You do not have permission to be here. This has been Logged!')
+
+    view_array = {}
+    alliances = []
+    for contact in all_contacts:
+        if contact.alliance_id not in alliances:
+            alliances.append(contact.alliance_id)
+        if contact.contact_id in view_array:
+            view_array[contact.contact_id][contact.alliance.alliance_id] = contact
+        else:
+            view_array[contact.contact_id] = {}
+            view_array[contact.contact_id][contact.alliance.alliance_id] = contact
+
+
+    ctx = {
+        'contacts': view_array,
+        'alliances': alliances
+    }
+    return render(request, 'alliancetools/contacts.html', ctx)
+
