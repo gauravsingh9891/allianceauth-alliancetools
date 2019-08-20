@@ -70,6 +70,7 @@ def item_image(type_id):
 def addclass(value, arg):
     return value.as_widget(attrs={'class': arg})
 
+
 @register.filter()
 def standing_span(standing):
     try:
@@ -88,5 +89,20 @@ def standing_span(standing):
             return mark_safe('<span class="label label-default">{}</span>'.format(standing))
 
     except:
-        logging.exception("Messsage")
+        #logging.exception("Messsage")
         return ""
+
+
+@register.simple_tag()
+def evename_img(_id, name, cat, size):
+    cats = {'character': 'Character', 'corporation': 'Corporation', 'alliance': 'Alliance'}
+    fmt = 'png'
+    if cat == 'character':
+        fmt = 'jpg'
+    if cat in cats:
+        return mark_safe('<img class="img-circle" src="https://imageserver.eveonline.com/%s/%s_128.%s"'
+                         ' style="height: %spx; width: %spx;" title="%s">' % (cats[cat], _id, fmt, size, size, name))
+
+    else:
+        return ""
+

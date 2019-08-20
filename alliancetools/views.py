@@ -20,7 +20,8 @@ from django.db.models import FloatField, F, ExpressionWrapper
 
 from .models import AllianceToolCharacter, Structure, CorpAsset, AllianceToolJob, AllianceToolJobComment, \
     NotificationPing, Poco, EveName, Notification, MapSolarSystem, TypeName, MoonExtractEvent, MiningObservation, \
-    MarketHistory, OrePrice, PublicContractItem, PublicContract, ApiKeyLog, ApiKey, RentalInvoice, AllianceContact
+    MarketHistory, OrePrice, PublicContractItem, PublicContract, ApiKeyLog, ApiKey, RentalInvoice, AllianceContact, \
+    RentalInvoice, CorporationWalletJournalEntry
 from .forms import AddJob, AddComment, EditJob
 from .tasks import _get_new_eve_name
 from easyaudit.models import CRUDEvent
@@ -817,7 +818,7 @@ def view_contracts(request):
 @login_required
 def view_contacts(request):
     if request.user.has_perm('alliancetools.admin_alliance_tools'):
-        all_contacts = AllianceContact.objects.all()
+        all_contacts = AllianceContact.objects.select_related('contact_name', 'alliance').prefetch_related('labels').all()
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
 
@@ -828,8 +829,16 @@ def view_contacts(request):
             alliances.append(contact.alliance_id)
         if contact.contact_id in view_array:
             view_array[contact.contact_id][contact.alliance.alliance_id] = contact
+            for label in contact.labels.all():
+                if label.label_name not in view_array[contact.contact_id]["labels"]:
+                    view_array[contact.contact_id]["labels"].append(label.label_name)
         else:
             view_array[contact.contact_id] = {}
+            view_array[contact.contact_id]["info"] = contact
+            view_array[contact.contact_id]["labels"] = []
+            for label in contact.labels.all():
+                if label.label_name not in view_array[contact.contact_id]["labels"]:
+                    view_array[contact.contact_id]["labels"].append(label.label_name)
             view_array[contact.contact_id][contact.alliance.alliance_id] = contact
 
 

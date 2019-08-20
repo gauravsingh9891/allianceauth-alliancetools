@@ -2521,10 +2521,19 @@ def update_alliance_contacts(character_id):
     logger.debug("updating alliance contacts for: %s" % str(character_id))
 
     def _update_contact_db(_alliance, _contact):
+
+        if _contact.get('contact_id'):
+            try:
+                contact_name = EveName.objects.get(eve_id=_contact.get('contact_id'))
+            except:
+                logger.debug("New ID %s" % str(_contact.get('contact_id')))
+                contact_name = _get_new_eve_name(_contact.get('contact_id'))
+
         _contact_item, _created = AllianceContact.objects \
             .update_or_create(alliance=_alliance, contact_id=_contact.get('contact_id'),
                               defaults={'contact_type': _contact.get('contact_type'),
-                                        'standing': _contact.get('standing')})
+                                        'standing': _contact.get('standing'),
+                                        'contact_name': contact_name})
 
         if _contact.get('label_ids', False):  # add labels
             for _label in _contact.get('label_ids'):
@@ -2577,11 +2586,9 @@ def update_alliance_contacts(character_id):
     AllianceContactLabel.objects.filter(alliance=_alliance).exclude(label_id__in=label_id_filter).delete()
 
 
-
 @shared_task
 def trim_old_data():
     characters = AllianceToolCharacter.objects.all()
-
     corp_ids = []
     for c in characters:
         if c.character.corporation_id not in corp_ids:

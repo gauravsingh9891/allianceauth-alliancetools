@@ -620,6 +620,7 @@ class RentalInvoice(models.Model):
 class Contact(models.Model):
 
     contact_id = models.BigIntegerField(null=True, default=None)
+    contact_name = models.ForeignKey(EveName, on_delete=models.SET_NULL, null=True, default=None)
     _avail_enum = Choices('faction', 'character', 'corporation', 'alliance')
     contact_type = models.CharField(max_length=15, choices=_avail_enum, null=True, default=None)
 

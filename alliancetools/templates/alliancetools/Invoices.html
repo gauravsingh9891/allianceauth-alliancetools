@@ -8,36 +8,22 @@
         <div class="row ">
             <table id="table-structs" class="table table-hover dataTable">
                 <thead>
-                    <th class="text-center" ></th>
-                    <th class="text-center" style="vertical-align: middle">Contact</th>
-                    <th class="text-center" style="vertical-align: middle">Sync</th>
-                    <th class="text-center" style="vertical-align: middle">{% evename_img 1900696668 "Init." "alliance" 32 %}</th>
-                    <th class="text-center" style="vertical-align: middle">{% evename_img 499005583 "IM" "alliance"  32 %}</th>
-                    <th class="text-center" style="vertical-align: middle">{% evename_img 1911932230 "IA" "alliance"  32 %}</th>
+                    <th class="text-center"></th>
+                    <th class="text-center">Contact</th>
                     <th class="text-center">Sync</th>
-                    <th class="text-center">Type</th>
+                    <th class="text-center">Init.</th>
+                    <th class="text-center"> IM </th>
+                    <th class="text-center"> IA </th>
                 </thead>
                 <tbody>
                 {% for contact, standing in contacts.items %}
                 <tr>
-                    <td class="text-center" style="vertical-align: middle">{% evename_img standing.info.contact_id standing.info.contact_name.name standing.info.contact_type 32 %}</td>
-                    <td class="text-center" style="vertical-align: middle">{{ standing.info.contact_name.name }}<br>
-                        {% for lbl in standing.labels %}<span class="label label-default">{{lbl}}</span>&nbsp;{% endfor %}</td>
-                    <td class="text-center" style="vertical-align: middle">
-                        {% if standing.1900696668.standing == standing.499005583.standing and standing.1900696668.standing == standing.1911932230.standing %} <span class="label label-primary">Full</span>
-                        {% elif standing.1900696668.standing == None and standing.499005583.standing == None %} <span class="label label-danger">Unsynced</span>
-                        {% elif standing.1900696668.standing == standing.499005583.standing and standing.1900696668.standing != standing.1911932230.standing %} <span class="label label-info">Core</span>
-                        {% else %} <span class="label label-danger">Unsynced</span> {% endif %}</td>
-                    <td class="text-center" style="vertical-align: middle">{{ standing.1900696668.standing | standing_span }}</td>
-                    <td class="text-center" style="vertical-align: middle">{{ standing.499005583.standing | standing_span }}</td>
-                    <td class="text-center" style="vertical-align: middle">{{ standing.1911932230.standing | standing_span }}</td>
-                    <td class="text-center" style="vertical-align: middle">
-                        {% if standing.1900696668.standing == standing.499005583.standing and standing.1900696668.standing == standing.1911932230.standing %} Full
-                        {% elif standing.1900696668.standing == None and standing.499005583.standing == None %} Unsynced
-                        {% elif standing.1900696668.standing == standing.499005583.standing and standing.1900696668.standing != standing.1911932230.standing %} Core
-                        {% else %} Unsynced {% endif %}</td>
-                    <td class="text-center" style="vertical-align: middle">{{ standing.info.contact_type }}</td>
-
+                    <td class="text-center"> img </td>
+                    <td class="text-center">{{ contact }} </td>
+                    <td class="text-center">{% if standing.1900696668.standing == standing.499005583.standing and standing.1900696668.standing == standing.1911932230.standing %} Synced {% else %} Un-Synced {% endif %}</td>
+                    <td class="text-center">{{ standing.1900696668.standing | standing_span }}</td>
+                    <td class="text-center">{{ standing.499005583.standing | standing_span }}</td>
+                    <td class="text-center">{{ standing.1911932230.standing | standing_span }}</td>
                 </tr>
                 {% empty %}
 
@@ -60,9 +46,7 @@
         $('#table-structs').DataTable({
             "filterDropDown": {
 					columns: [{
-						idx: 6
-                            },{
-						idx: 7
+						idx: 2
                             }
 
 						],
@@ -71,10 +55,10 @@
             "columnDefs": [
                 { "searchable": false, "targets": [0] },
                 { "sortable": false, "targets": [0] },
-                { "visible": false, "targets": [6, 7] }
+                { "visible": false, "targets": [] }
             ],
             "order": [
-                [1, "asc"]
+                [1, "desc"]
             ],
             "pageLength": 100
         });
