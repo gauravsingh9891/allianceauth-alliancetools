@@ -54,6 +54,10 @@
                                     {% if alt.last_update_moon_obs %}<tr>
                                         <td class="text-left">Moon Observers</td><td>{{ alt.last_update_moon_obs|naturaltime }}</td><td>{{ alt.next_update_moon_obs|naturaltime }}</td>
                                     </tr>{% endif %}
+
+                                    {% if alt.last_update_contact %}<tr>
+                                        <td class="text-left">Contacts</td><td>{{ alt.last_update_contact|naturaltime }}</td><td>{{ alt.next_update_contact|naturaltime }}</td>
+                                    </tr>{% endif %}
                                 </table>
                                 {% else %}
                                     <div class="alert alert-warning text-center">{% trans "Token Not Updated" %}</div>

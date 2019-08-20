@@ -25,6 +25,7 @@
                                 <th class="text-center">Pocos</th>
                                 <th class="text-center">Moons</th>
                                 <th class="text-center">Moon Observers</th>
+                                <th class="text-center">Contacts</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -40,6 +41,7 @@
                                 <td class="text-center" style="vertical-align:middle">{% if alt.last_update_pocos %}{{ alt.last_update_pocos|date:"Y-m-d" }}<br>{{ alt.last_update_pocos|date:"h:i" }}<br><span class="label {% if not alt.next_update_pocos_expired %}label-primary{% else %}label-danger{% endif %}">{{ alt.next_update_pocos|naturaltime }}{% endif %}</span></td>
                                 <td class="text-center" style="vertical-align:middle">{% if alt.last_update_moons %}{{ alt.last_update_moons|date:"Y-m-d" }}<br>{{ alt.last_update_moons|date:"h:i" }}<br><span class="label {% if not alt.next_update_moons_expired %}label-primary{% else %}label-danger{% endif %}">{{ alt.next_update_moons|naturaltime }}{% endif %}</span></td>
                                 <td class="text-center" style="vertical-align:middle">{% if alt.last_update_moon_obs %}{{ alt.last_update_moon_obs|date:"Y-m-d" }}<br>{{ alt.last_update_moon_obs|date:"h:i" }}<br><span class="label {% if not alt.next_update_moon_obs_expired %}label-primary{% else %}label-danger{% endif %}">{{ alt.next_update_moon_obs|naturaltime }}{% endif %}</span></td>
+                                <td class="text-center" style="vertical-align:middle">{% if alt.last_update_contact %}{{ alt.last_update_contact|date:"Y-m-d" }}<br>{{ alt.last_update_contact|date:"h:i" }}<br><span class="label {% if not alt.next_update_contact_expired %}label-primary{% else %}label-danger{% endif %}">{{ alt.next_update_contact|naturaltime }}{% endif %}</span></td>
                             </tr>
                     {% endfor %}
                          </tbody>

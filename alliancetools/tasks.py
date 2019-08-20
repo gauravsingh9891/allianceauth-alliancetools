@@ -727,6 +727,33 @@ def run_char_updates(self, character_id):
     #except:
     #    logging.exception("Messsage")
 
+    # try:
+    if character.next_update_contact:
+        if character.next_update_contact < dt_now:
+            logger.debug(update_alliance_contacts(character.character.character_id))  # cache expired
+    else:
+        logger.debug(update_alliance_contacts(character.character.character_id))  # new/no info
+    # except:
+    #    logging.exception("Messsage")
+
+    # try:
+    if character.next_update_moon_obs:
+        if character.next_update_moon_obs < dt_now:
+            logger.debug(update_corp_mining_observers(character.character.character_id))  # cache expired
+    else:
+        logger.debug(update_corp_mining_observers(character.character.character_id))  # new/no info
+    # except:
+    #    logging.exception("Messsage")
+
+    # try:
+    if character.next_update_moons:
+        if character.next_update_moons < dt_now:
+            logger.debug(run_moon_exracts(character.character.character_id))  # cache expired
+    else:
+        logger.debug(run_moon_exracts(character.character.character_id))  # new/no info
+    # except:
+    #    logging.exception("Messsage")
+
     return "Finished Update for: %s" % (str(character_id))
 
 
@@ -2544,6 +2571,10 @@ def update_alliance_contacts(character_id):
     req_scopes = ['esi-alliances.read_contacts.v1']
 
     token = _get_token(character_id, req_scopes)
+
+    if not token:
+        return "No Tokens"
+
     _count = 0
     while True:
         try:
@@ -2570,10 +2601,14 @@ def update_alliance_contacts(character_id):
     contact_page = 1
     total_pages = 1
     contact_ids = []
+    cache_expires = None
+
     while contact_page <= total_pages:  # get all the pages...
         contacts_page, result = c.Contacts.get_alliances_alliance_id_contacts(alliance_id=_character.character.alliance_id,
                                                                                         page=contact_page).result()
         total_pages = int(result.headers['X-Pages'])
+        cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(
+            tzinfo=timezone.utc)
 
         for contact in contacts_page:  # update contacts
             contact_ids.append(contact.get('contact_id'))
@@ -2584,6 +2619,10 @@ def update_alliance_contacts(character_id):
     AllianceContact.objects.filter(alliance=_alliance).exclude(
         contact_id__in=contact_ids).delete()  # delete old stuff
     AllianceContactLabel.objects.filter(alliance=_alliance).exclude(label_id__in=label_id_filter).delete()
+
+    AllianceToolCharacter.objects.filter(character__character_id=character_id).update(
+        next_update_contact=cache_expires,
+        last_update_contact=datetime.datetime.utcnow().replace(tzinfo=timezone.utc))
 
 
 @shared_task
