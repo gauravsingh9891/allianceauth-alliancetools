@@ -1633,10 +1633,17 @@ def update_corp_mining_observers(character_id):
     logger.debug("Started mining observers for: %s" % str(character_id))
 
     def _observer_create(_corp, _observer, _last_updated):
+        structure = None
+        try:
+            structure = Structure.objects.get(structure_id=observer.get('observer_id'))
+        except ObjectDoesNotExist:
+            # structure not in db yet ( probably due to cache we can try again next time. )
+            pass
+
         return MiningObserver(corp=_corp,
                               last_updated=_last_updated,
                               observer_id=_observer.get('observer_id'),
-                              structure=Structure.objects.get(structure_id=_observer.get('observer_id')),
+                              structure=structure,
                               observer_type=_observer.get('observer_type'))
 
     def _observation_create(_observer, _last_updated, _observer_id):
@@ -1715,10 +1722,17 @@ def update_corp_mining_observers(character_id):
                 new_observers.append(_observer_create(_corporation, observer, last_updated_datetime))
                 observer_db_list.append(observer.get('observer_id'))
             else:
+                structure = None
+                try:
+                    structure = Structure.objects.get(structure_id=observer.get('observer_id'))
+                except ObjectDoesNotExist:
+                    # structure not in db yet ( probably due to cache we can try again next time. )
+                    pass
+
                 MiningObserver.objects.filter(observer_id=observer.get('observer_id')).update(
                     last_updated=last_updated_datetime,
                     observer_id=observer.get('observer_id'),
-                    structure=Structure.objects.get(structure_id=observer.get('observer_id')),
+                    structure=structure,
                     observer_type=observer.get('observer_type')
                 )
         ob_page += 1

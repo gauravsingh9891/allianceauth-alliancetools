@@ -530,13 +530,16 @@ def extractions(request):
     note_output = []
     type_ids = []
     for e in events:
-        notification_data = yaml.load(e.notification.notification_text)
-        totalm3 = 0
-        for id, v in notification_data['oreVolumeByType'].items():
-            type_ids.append(id)
-            totalm3 = totalm3+v
+        try:
+            notification_data = yaml.load(e.notification.notification_text)
+            totalm3 = 0
+            for id, v in notification_data['oreVolumeByType'].items():
+                type_ids.append(id)
+                totalm3 = totalm3+v
 
-        note_output.append({'array':notification_data, 'db':e, 'total':totalm3})
+            note_output.append({'array':notification_data, 'db':e, 'total':totalm3})
+        except:
+            pass #No Notification no big dealio
 
     type_ids = set(type_ids)
 
@@ -557,7 +560,7 @@ def extractions(request):
                       }
 
             note['array']['ore'].append(output)
-        print(note, flush=True)
+        #print(note, flush=True)
 
     context = {
         'events': note_output,
