@@ -12,6 +12,7 @@
                     <th class="text-center">name</th>
                     <th class="text-center">name</th>
                     <th class="text-center">Region</th>
+                    <th class="text-center">Constellation</th>
                     <th class="text-center">Corp</th>
                     <th class="text-center">Type</th>
                     <th class="text-center">dump</th>
@@ -24,6 +25,7 @@
                     <td class="text-center">{{ event.db.structure.name }}</td>
                     <td class="text-center">{{ event.db.moon_name.name }}</td>
                     <td class="text-center">{{ event.db.structure.system_name.regionName }}</td>
+                    <td class="text-center">{{ event.db.structure.system_name.constellationName }}</td>
                     <td class="text-center">{{ event.db.corp.corporation_name }}</td>
                     <td class="text-center">{{ event.db.structure.type_name.name }}</td>
                     <td class="text-center">{% for v in event.array.ore %}
@@ -46,7 +48,18 @@
 {% block extra_script %}
     $(document).ready(function() {
         $('#table-structs').DataTable({
-
+            "filterDropDown": {
+					columns: [{
+						idx: 4
+                            },
+                            {
+						idx: 5
+                            },
+                            {
+						idx: 6
+                            }],
+                    bootstrap: true
+            },
             "order": [
                 [1, "desc"]
             ],
