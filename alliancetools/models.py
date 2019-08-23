@@ -672,3 +672,7 @@ class AllianceContact(Contact):
         else:
             return False
 
+class StructurePaymentCompleted(models.Model):
+    date_completed = models.DateTimeField(auto_now=True)
+    structure_id = models.BigIntegerField()
+    completed_by = models.ForeignKey(EveCharacter, on_delete=models.SET_NULL, null=True, default=None)

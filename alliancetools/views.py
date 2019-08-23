@@ -21,7 +21,7 @@ from django.db.models import FloatField, F, ExpressionWrapper
 from .models import AllianceToolCharacter, Structure, CorpAsset, AllianceToolJob, AllianceToolJobComment, \
     NotificationPing, Poco, EveName, Notification, MapSolarSystem, TypeName, MoonExtractEvent, MiningObservation, \
     MarketHistory, OrePrice, PublicContractItem, PublicContract, ApiKeyLog, ApiKey, RentalInvoice, AllianceContact, \
-    RentalInvoice, CorporationWalletJournalEntry
+    RentalInvoice, CorporationWalletJournalEntry, StructurePaymentCompleted
 from .forms import AddJob, AddComment, EditJob
 from .tasks import _get_new_eve_name
 from easyaudit.models import CRUDEvent
@@ -714,7 +714,10 @@ def str_txfrs(request):
     if request.user.has_perm('alliancetools.admin_alliance_tools'):
         thritydp = datetime.datetime.today().replace(tzinfo=datetime.timezone.utc) - datetime.timedelta(days=30)
         notifs = Notification.objects.filter(character__character__corporation_name__contains="Holding", notification_type='OwnershipTransferred', timestamp__gte=thritydp).exclude(notification_text__contains="structureTypeID: 2233")
-
+        txfrs = StructurePaymentCompleted.objects.all()
+        txfr_completes = {}
+        for tx in txfrs:
+            txfr_completes[tx.structure_id] = tx
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
 
@@ -758,7 +761,8 @@ def str_txfrs(request):
                                   "name": structure_name,
                                   "type": TypeName.objects.get(type_id=notification_data['structureTypeID']),
                                   "id": notification_data['structureID'],
-                                  "date": note.timestamp
+                                  "date": note.timestamp,
+                                  "txfrd": txfr_completes.get(notification_data['structureID'], None)
                                   })
 
     context = {
@@ -850,4 +854,18 @@ def view_contacts(request):
         'alliances': alliances
     }
     return render(request, 'alliancetools/contacts.html', ctx)
+
+
+@login_required
+def mark_txfr_complete(request, structure_id=None):
+    StructurePaymentCompleted(structure_id=structure_id, completed_by=request.user.profile.main_character).save()
+    messages.info(request, "Marked Structure Done")
+    return redirect('alliancetools:str_txfr')
+
+
+@login_required
+def mark_txfr_uncomplete(request, structure_id=None):
+    StructurePaymentCompleted.objects.filter(structure_id=structure_id).delete()
+    messages.info(request, "Marked Structure Done")
+    return redirect('alliancetools:str_txfr')
 

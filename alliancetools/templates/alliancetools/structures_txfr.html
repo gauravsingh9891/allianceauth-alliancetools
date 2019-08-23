@@ -14,6 +14,7 @@
                     <th class="text-center">To Corp</th>
                     <th class="text-center">Name</th>
                     <th class="text-center">Type</th>
+                    <th class="text-center"></th>
                 </thead>
                 <tbody>
                 {% for notif in notifs %}
@@ -21,8 +22,10 @@
                     <td class="text-center">{{ notif.date|date:"Y-m-d h:i" }}</td>
                     <td class="text-center">{{ notif.old_owner }}</td>
                     <td class="text-center">{{ notif.new_owner }}</td>
-                    <td class="text-center">{{ notif.name }}<br><a href="{% url 'alliancetools:do_eve_prasial' notif.id %}">Appraisal Link</a></td>
+                    <td class="text-center">{{ notif.name }}<br><a href="{% url 'alliancetools:do_eve_prasial' notif.id %}" target="_blank">Appraisal Link</a></td>
                     <td class="text-center">{{ notif.type.name }}</td>
+                    {% if notif.txfrd %}<td class="text-center"><a class="btn btn-danger" href="{% url 'alliancetools:mark_txfr_uncomplete' notif.id %}" target="_blank">Completed by<br>{{ notif.txfrd.completed_by.character_name }}</a></td>{% else %}
+                    <td class="text-center"><a class="btn btn-primary" href="{% url 'alliancetools:mark_txfr_complete' notif.id %}" target="_blank">Mark Complete</a></td>{% endif %}
                 </tr>
                 {% empty %}
 
