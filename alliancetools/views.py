@@ -573,11 +573,12 @@ def extractions(request):
 def structure_timers(request):
     member_state = State.objects.get(name='Member')
     if request.user.profile.state == member_state:
-        events = Structure.objects.select_related('corporation', 'system_name', 'type_name').all()\
-                    .exclude(state="shield_vulnerable").order_by('state_timer_end')
+        events = Structure.objects.select_related('corporation', 'system_name', 'type_name').filter(state__contains="reinforce")
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
 
+    if request.user.has_perm('alliancetools.admin_alliance_tools'):
+        events = Structure.objects.select_related('corporation', 'system_name', 'type_name').all().exclude(state="shield_vulnerable")
 
     context = {
         'structure_timers': events,
