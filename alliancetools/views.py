@@ -765,7 +765,6 @@ def str_txfrs(request):
                                   "date": note.timestamp,
                                   "txfrd": txfr_completes.get(notification_data['structureID'], None)
                                   }
-    print(notification_list)
     context = {
         'notifs': notification_list
     }
