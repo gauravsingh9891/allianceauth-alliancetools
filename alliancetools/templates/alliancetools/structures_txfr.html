@@ -17,7 +17,7 @@
                     <th class="text-center"></th>
                 </thead>
                 <tbody>
-                {% for notif in notifs %}
+                {% for key, notif in notifs.items %}
                 <tr>
                     <td class="text-center">{{ notif.date|date:"Y-m-d h:i" }}</td>
                     <td class="text-center">{{ notif.old_owner }}</td>

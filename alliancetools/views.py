@@ -722,7 +722,7 @@ def str_txfrs(request):
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
 
-    notification_list = []
+    notification_list = {}
     for note in notifs:
         notification_data = yaml.load(note.notification_text)
 
@@ -757,15 +757,15 @@ def str_txfrs(request):
             except:
                 old_owner = "ESI ERROR (%s)" % str(notification_data['oldOwnerCorpID'])
 
-        notification_list.append({"old_owner":old_owner,
+        notification_list[notification_data['structureID']] = {"old_owner":old_owner,
                                   "new_owner":new_owner,
                                   "name": structure_name,
                                   "type": TypeName.objects.get(type_id=notification_data['structureTypeID']),
                                   "id": notification_data['structureID'],
                                   "date": note.timestamp,
                                   "txfrd": txfr_completes.get(notification_data['structureID'], None)
-                                  })
-
+                                  }
+    print(notification_list)
     context = {
         'notifs': notification_list
     }
