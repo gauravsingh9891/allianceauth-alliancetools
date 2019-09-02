@@ -582,6 +582,8 @@ def update_corp_structures(character_id):  # pagnated results
                                 logger.debug("502 error %s" % str(count))
                                 count += 1
 
+                except DoesNotExist as e:
+                    celestial = None
                 except:
                     logging.exception("Messsage")
                     celestial = None
