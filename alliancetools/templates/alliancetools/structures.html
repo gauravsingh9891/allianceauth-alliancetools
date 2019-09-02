@@ -23,6 +23,7 @@
                     <td class="text-center">{% if view_fittings %}<a href="{% url 'alliancetools:structure' structure.structure_id %}">{% endif %}<img class="ra-avatar img-circle" src="https://image.eveonline.com/Type/{{ structure.type_id }}_64.png">{% if view_fittings %}</a>{% endif %}</td>
                     <td class="text-center">{% if view_fittings %}<a href="{% url 'alliancetools:structure' structure.structure_id %}">{% endif %}{{ structure.name }}{% if view_fittings %}</a>{% endif %}</br>
                         <span class="label label-info">{{ structure.type_name.name }}</span></br>
+                        {% if structure.closest_celestial %}<span class="label label-default">{{ structure.closest_celestial.celestial_name }}</span></br>{% endif %}
                         <span class="label label-default">{{ structure.corporation.corporation_name }}</span>{% if view_fittings %}<br><a href="{% url 'alliancetools:do_eve_prasial' structure.structure_id %}">Appraisal Link</a>{% endif %}</td>
                     <td class="text-center">{{ structure.fuel_expires|date:"Y-m-d" }}</br>
                         <span class="label label-default">{{ structure.fuel_expires|timeuntil }}</span>

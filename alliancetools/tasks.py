@@ -6,7 +6,7 @@ from .models import CorpAsset, ItemName, TypeName, Structure, Notification, Corp
     CorporationWalletDivision, AllianceToolCharacter, StructureService, BridgeOzoneLevel, MapSolarSystem, EveName, \
     NotificationAlert, NotificationPing, Poco, PocoCelestial, AssetLocation, MoonExtractEvent, MiningObservation, \
     MiningObserver, MarketHistory, OrePrice, PublicContract, PublicContractItem, PublicContractSearch, AllianceContact, \
-    AllianceContactLabel
+    AllianceContactLabel, FuelPing, FuelNotifierFilter, StructureCelestial
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo, EveAllianceInfo
 from esi.models import Token
 from .esi_workaround import EsiResponseClient, esi_client_factory
@@ -542,6 +542,45 @@ def update_corp_structures(character_id):  # pagnated results
             })
 
         if _structure_ob:
+            _asset = None
+            celestial = None
+            _location = None
+            try:
+                celestial = StructureCelestial.objects.filter(structure_id=_structure.get('structure_id'))
+                _asset = CorpAsset.objects.get(item_id=_structure.get('structure_id'), corp=_corporation)
+                _req_scopes = ['esi-assets.read_corporation_assets.v1']
+                _token = _get_token(character_id, req_scopes)
+                if token:
+                    _c = EsiResponseClient(_token).get_esi_client(response=True)
+                    locations, results = _c.Assets.post_corporations_corporation_id_assets_locations(
+                        corporation_id=_corporation.corporation_id,
+                        item_ids=[_structure.get('structure_id')]).result()
+                    _location = locations[0]
+            except:
+                logging.exception("Messsage")
+
+            if not celestial.exists() and _asset is not None and _location is not None:
+                url = "https://www.fuzzwork.co.uk/api/nearestCelestial.php?x=%s&y=%s&z=%s&solarsystemid=%s" \
+                      % ((str(_location['position'].get('x'))),
+                         (str(_location['position'].get('y'))),
+                         (str(_location['position'].get('z'))),
+                         (str(_structure.get('system_id')))
+                         )
+                #logger.debug(url)
+                r = requests.get(url)
+                fuzz_result = r.json()
+
+                celestial = StructureCelestial.objects.create(
+                    structure_id=_structure.get('structure_id'),
+                    celestial_name=fuzz_result.get('itemName')
+                )
+            else:
+                celestial = celestial[0]
+
+            if celestial is not None:
+                _structure_ob.closest_celestial = celestial
+                _structure_ob.save()
+
             if _structure.get('services'):
                 db_services = StructureService.objects.filter(structure=_structure_ob)
                 for service in _structure.get('services'):
@@ -2651,3 +2690,87 @@ def trim_old_data():
     CorporationWalletDivision.objects.all().exclude(corporation__corporation_id__in=corp_ids).delete()
     Poco.objects.all().exclude(corp__corporation_id__in=corp_ids).delete()
     MoonExtractEvent.objects.all().exclude(corp__corporation_id__in=corp_ids).delete()
+
+def fuel_ping_builder(structure, filter, title, message):
+
+    return False
+
+def lo_ping_builder(structure, filter, title, message):
+
+    return False
+
+
+@shared_task
+def send_fuel_pings():
+    fuel_filters = FuelNotifierFilter.objects.all()
+
+    for f in fuel_filters:
+        logger.debug("Fuel Pings for %s" % str(f.corporation))
+
+        include_types = []
+        if f.ping_citadel_levels:
+            include_types += f.get_citadel_types
+
+        if f.ping_engineering_levels:
+            include_types += f.get_engineering_types
+
+        if f.ping_refinary_levels:
+            include_types += f.get_refinary_types
+
+        if f.ping_flex_levels:
+            include_types += f.get_flex_types
+
+        fuel_structures = Structure.objects.filter(type_id__in=include_types)
+
+        if f.corporation:
+            logger.debug("Corp '%s'" % str(f.corporation))
+            fuel_structures = fuel_structures.filter(corporation=f.corporation)
+
+        if f.struct_filter_include is not None:
+            logger.debug("Include for '%s'" % str(f.struct_filter_exclude))
+            fuel_structures = fuel_structures.filter(name__endswith=f.struct_filter_include)
+
+        if f.struct_filter_exclude is not None:
+            logger.debug("Exclude for '%s'" % str(f.struct_filter_exclude))
+            fuel_structures = fuel_structures.exclude(name__endswith=str(f.struct_filter_exclude))
+
+        low_fuel = []
+        for struct in fuel_structures:
+            if f.ping_flex_ozone_levels:
+                if struct.type_id in f.get_ozone_types:
+                    ozone_level = struct.ozone_level
+                    if ozone_level < 1000000:
+                        if 0 <= ozone_level <= 100000:
+                            logger.debug("oz 100k for %s" % str(struct.name))
+                            #@everyone
+                        if 100000 < ozone_level <= 200000:
+                            logger.debug("oz 200k for %s" % str(struct.name))
+                            #@here
+                        if 200000 < ozone_level <= 500000:
+                            logger.debug("oz 500k for %s" % str(struct.name))
+                            #soft
+                        if 500000 < ozone_level:
+                            logger.debug("oz 1M for %s" % str(struct.name))
+                            #soft
+
+            daysLeft = 0
+            if not struct.fuel_expires:
+                logger.debug("Fuel empty for %s" % str(struct.name))
+                continue
+
+            daysLeft = (struct.fuel_expires - datetime.datetime.now(timezone.utc)).days
+
+            if daysLeft < 15:
+                if 0 <= daysLeft < 2:
+                    logger.debug("Fuel 1d for %s" % str(struct.name))
+                    #@everyone
+                if 2 <= daysLeft < 3:
+                    logger.debug("Fuel 2d for %s" % str(struct.name))
+                    #@here
+                if 3 <= daysLeft < 8:
+                    logger.debug("Fuel 7d for %s" % str(struct.name))
+                    #soft
+                if 8 <= daysLeft:
+                    logger.debug("Fuel 14d for %s" % str(struct.name))
+                    #soft
+

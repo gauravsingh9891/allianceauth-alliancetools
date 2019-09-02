@@ -225,6 +225,11 @@ class AssetLocation(models.Model):
 
 
 # Structure models **************************************************************************************************
+class StructureCelestial(models.Model):
+    structure_id = models.BigIntegerField()
+    celestial_name = models.CharField(max_length=500, null=True, default=None)
+
+
 class Structure(models.Model):
     corporation = models.ForeignKey(EveCorporationInfo, on_delete=models.CASCADE, related_name='at_structure')
 
@@ -249,6 +254,7 @@ class Structure(models.Model):
     name = models.CharField(max_length=150)
     system_name = models.ForeignKey(MapSolarSystem, on_delete=models.SET_NULL, null=True, default=None)
     type_name = models.ForeignKey(TypeName, on_delete=models.SET_NULL, null=True, default=None)
+    closest_celestial = models.ForeignKey(StructureCelestial, on_delete=models.SET_NULL, null=True, default=None)
 
     @property
     def services(self):
@@ -676,3 +682,76 @@ class StructurePaymentCompleted(models.Model):
     date_completed = models.DateTimeField(auto_now=True)
     structure_id = models.BigIntegerField()
     completed_by = models.ForeignKey(EveCharacter, on_delete=models.SET_NULL, null=True, default=None)
+
+
+class FuelNotifierFilter(models.Model):
+    corporation = models.ForeignKey(EveCorporationInfo,
+                                    on_delete=models.SET_NULL,
+                                    null=True,
+                                    default=None,
+                                    blank=True) # None is all
+    discord_webhook = models.TextField()
+
+    struct_filter_exclude = models.CharField(max_length=1, null=True, default=None, blank=True)
+    struct_filter_include = models.CharField(max_length=1, null=True, default=None, blank=True)
+
+    # fort, astra, keep
+    # 35833 "Fortizar", 47516 "'Prometheus' Fortizar", 47512 "'Moreau' Fortizar", 47513 "'Draccous' Fortizar", 47514 "'Horizon' Fortizar", 47515 "'Marginis' Fortizar"
+    # 35832 "Astrahus", 35834 "Keepstar"
+    ping_citadel_levels = models.BooleanField(default=True)
+
+    @property
+    def get_citadel_types(self):
+        return [35833, 47516, 47512, 47513, 47514, 47515, 35832, 35834]
+
+    # rait, azbel, sotiyo
+    # 35825 "Raitaru", 35826 "Azbel", 35827 "Sotiyo"
+    ping_engineering_levels = models.BooleanField(default=True)
+
+    @property
+    def get_engineering_types(self):
+        return [35825, 35826, 35827]
+
+    # athanor, tatara
+    # 35835 "Athanor", 35836 "Tatara"
+    ping_refinary_levels = models.BooleanField(default=True)
+
+    @property
+    def get_refinary_types(self):
+        return [35835, 35836]
+
+    # cyno, gates, jammers
+    # 37534 "Tenebrex Cyno Jammer", 35840 "Pharolux Cyno Beacon", 35841 "Ansiblex Jump Gate"
+    ping_flex_levels = models.BooleanField(default=True)
+    ping_flex_ozone_levels = models.BooleanField(default=True)
+
+    @property
+    def get_flex_types(self):
+        return [37534, 35840, 35841]
+
+    @property
+    def get_ozone_types(self):
+        return [35841]
+
+    def __str__(self):
+        return "Fuel Pings for: %s" % self.corporation.corporation_name
+
+
+class FuelPing(models.Model):
+    filter = models.ForeignKey(FuelNotifierFilter, on_delete=models.CASCADE)
+
+    is_lo_ping = models.BooleanField(default=False)
+    lo_level = models.IntegerField(null=True, default=None, blank=True) # ozone level
+    last_ping_lo_level = models.IntegerField(null=True, default=None, blank=True) # ozone remaining @last ping
+
+    date_empty = models.DateTimeField(null=True, default=None, blank=True)  #expirary
+    last_ping_time = models.IntegerField(null=True, default=None, blank=True) # hours remaining @last ping
+
+    last_message = models.TextField()
+
+    structure = models.ForeignKey(Structure, on_delete=models.CASCADE, null=True, default=None)
+
+    last_update = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return "Fuel Ping for: %s" % self.structure.name
