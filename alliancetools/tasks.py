@@ -543,37 +543,37 @@ def update_corp_structures(character_id):  # pagnated results
 
         if _structure_ob:
             _asset = None
-            celestial = None
             _location = None
-            try:
-                celestial = StructureCelestial.objects.filter(structure_id=_structure.get('structure_id'))
-                _asset = CorpAsset.objects.get(item_id=_structure.get('structure_id'), corp=_corporation)
-                _req_scopes = ['esi-assets.read_corporation_assets.v1']
-                _token = _get_token(character_id, req_scopes)
-                if token:
-                    _c = EsiResponseClient(_token).get_esi_client(response=True)
-                    locations, results = _c.Assets.post_corporations_corporation_id_assets_locations(
-                        corporation_id=_corporation.corporation_id,
-                        item_ids=[_structure.get('structure_id')]).result()
-                    _location = locations[0]
-            except:
-                logging.exception("Messsage")
+            celestial = StructureCelestial.objects.filter(structure_id=_structure.get('structure_id'))
 
-            if not celestial.exists() and _asset is not None and _location is not None:
-                url = "https://www.fuzzwork.co.uk/api/nearestCelestial.php?x=%s&y=%s&z=%s&solarsystemid=%s" \
-                      % ((str(_location['position'].get('x'))),
-                         (str(_location['position'].get('y'))),
-                         (str(_location['position'].get('z'))),
-                         (str(_structure.get('system_id')))
-                         )
-                #logger.debug(url)
-                r = requests.get(url)
-                fuzz_result = r.json()
+            if not celestial.exists():
+                try:
+                    _asset = CorpAsset.objects.get(item_id=_structure.get('structure_id'), corp=_corporation)
+                    _req_scopes = ['esi-assets.read_corporation_assets.v1']
+                    _token = _get_token(character_id, req_scopes)
+                    if token:
+                        _c = EsiResponseClient(_token).get_esi_client(response=True)
+                        locations, results = _c.Assets.post_corporations_corporation_id_assets_locations(
+                            corporation_id=_corporation.corporation_id,
+                            item_ids=[_structure.get('structure_id')]).result()
+                        _location = locations[0]
 
-                celestial = StructureCelestial.objects.create(
-                    structure_id=_structure.get('structure_id'),
-                    celestial_name=fuzz_result.get('itemName')
-                )
+                    url = "https://www.fuzzwork.co.uk/api/nearestCelestial.php?x=%s&y=%s&z=%s&solarsystemid=%s" \
+                          % ((str(_location['position'].get('x'))),
+                             (str(_location['position'].get('y'))),
+                             (str(_location['position'].get('z'))),
+                             (str(_structure.get('system_id')))
+                             )
+                    #logger.debug(url)
+                    r = requests.get(url)
+                    fuzz_result = r.json()
+
+                    celestial = StructureCelestial.objects.create(
+                        structure_id=_structure.get('structure_id'),
+                        celestial_name=fuzz_result.get('itemName')
+                    )
+                except:
+                    logging.exception("Messsage")
             else:
                 celestial = celestial[0]
 
