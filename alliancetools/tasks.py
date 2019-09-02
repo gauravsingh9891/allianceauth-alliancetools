@@ -577,12 +577,12 @@ def update_corp_structures(character_id):  # pagnated results
                                     structure_id=_structure.get('structure_id'),
                                     celestial_name=fuzz_result.get('itemName')
                                 )
-                                break
+                                count = maxTries + 1
                             except bravado.exception.HTTPBadGateway as e:
                                 logger.debug("502 error %s" % str(count))
                                 count += 1
 
-                except DoesNotExist as e:
+                except ObjectDoesNotExist as e:
                     celestial = None
                 except:
                     logging.exception("Messsage")
