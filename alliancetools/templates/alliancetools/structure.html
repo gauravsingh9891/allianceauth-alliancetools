@@ -84,6 +84,7 @@
             <div class="col-sm-12 col-md-8 text-center">
                 <div class="col-sm-12 col-md-12 text-center">
                     <h4>Location</h4>
+                    {% if structure.closest_celestial %}<span class="label label-default">{{ structure.closest_celestial.celestial_name }}</span></br>{% endif %}
                     <p><a href="http://evemaps.dotlan.net/system/{{structure.system_name.solarSystemName|slug_dl}}">{{structure.system_name.solarSystemName}}</a>
                         - <a href="http://evemaps.dotlan.net/map/{{structure.system_name.regionName|slug_dl}}/{{structure.system.constellationName}}">{{structure.system_name.constellationName}}</a>
                             - <a href="http://evemaps.dotlan.net/map/{{structure.system_name.regionName|slug_dl}}">{{structure.system_name.regionName}}</a></p>

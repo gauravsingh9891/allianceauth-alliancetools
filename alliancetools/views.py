@@ -188,7 +188,7 @@ def structures(request):
 
     if request.user.has_perm('alliancetools.access_alliance_tools_structures'):
         #print("admin", flush=True)
-        structures = Structure.objects.select_related('corporation', 'system_name', 'type_name').all().prefetch_related('structureservice_set')
+        structures = Structure.objects.select_related('corporation', 'system_name', 'type_name', 'closest_celestial').all().prefetch_related('structureservice_set')
     elif request.user.has_perm('alliancetools.access_alliance_tools_structures_renter'):
         #print("renter", flush=True)
         structures = Structure.objects.select_related('corporation', 'system_name', 'type_name').filter(
