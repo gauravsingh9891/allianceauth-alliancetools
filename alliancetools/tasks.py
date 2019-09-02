@@ -553,27 +553,38 @@ def update_corp_structures(character_id):  # pagnated results
                     _token = _get_token(character_id, req_scopes)
                     if token:
                         _c = EsiResponseClient(_token).get_esi_client(response=True)
-                        locations, results = _c.Assets.post_corporations_corporation_id_assets_locations(
-                            corporation_id=_corporation.corporation_id,
-                            item_ids=[_structure.get('structure_id')]).result()
-                        _location = locations[0]
+                        count = 0
+                        max_tries = 3
+                        while count < max_tries:
+                            try:
+                                locations, results = _c.Assets.post_corporations_corporation_id_assets_locations(
+                                    corporation_id=_corporation.corporation_id,
+                                    item_ids=[_structure.get('structure_id')]).result()
 
-                    url = "https://www.fuzzwork.co.uk/api/nearestCelestial.php?x=%s&y=%s&z=%s&solarsystemid=%s" \
-                          % ((str(_location['position'].get('x'))),
-                             (str(_location['position'].get('y'))),
-                             (str(_location['position'].get('z'))),
-                             (str(_structure.get('system_id')))
-                             )
-                    #logger.debug(url)
-                    r = requests.get(url)
-                    fuzz_result = r.json()
+                                _location = locations[0]
 
-                    celestial = StructureCelestial.objects.create(
-                        structure_id=_structure.get('structure_id'),
-                        celestial_name=fuzz_result.get('itemName')
-                    )
+                                url = "https://www.fuzzwork.co.uk/api/nearestCelestial.php?x=%s&y=%s&z=%s&solarsystemid=%s" \
+                                      % ((str(_location['position'].get('x'))),
+                                         (str(_location['position'].get('y'))),
+                                         (str(_location['position'].get('z'))),
+                                         (str(_structure.get('system_id')))
+                                         )
+
+                                r = requests.get(url)
+                                fuzz_result = r.json()
+
+                                celestial = StructureCelestial.objects.create(
+                                    structure_id=_structure.get('structure_id'),
+                                    celestial_name=fuzz_result.get('itemName')
+                                )
+                                break
+                            except bravado.exception.HTTPBadGateway as e:
+                                logger.debug("502 error %s" % str(count))
+                                count += 1
+
                 except:
                     logging.exception("Messsage")
+                    celestial = None
             else:
                 celestial = celestial[0]
 
