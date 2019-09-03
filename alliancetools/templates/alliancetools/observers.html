@@ -5,10 +5,10 @@
 {% load alliancetools_tags %}
 {% block at_block %}
     <h2 class="text-center">Mining Ledger!</h2>
-    <p class="text-center">Begining at: {{earliest_date|date:"Y-m-d"}} <br> Total Value: {{total_isk|floatformat:2|intcomma}}</p>
+    <p class="text-center">Begining at: {{earliest_date|date:"Y-m-d"}} <br> Ending at: {{latest_date|date:"Y-m-d"}} <br> Total Value: {{total_isk|floatformat:2|intcomma}}</p>
     {% if observed_data %}
 
-        <div class="row ">
+        <div class="row hidden">
             <table id="table-structs" class="table table-hover dataTable">
                 <thead>
                     <th class="text-center">Citadel</th>
@@ -87,7 +87,6 @@
                 <thead>
                     <th class="text-center" style="vertical-align:middle">Name</th>
                     <th class="text-center" style="vertical-align:middle">Corp</th>
-                    <th class="text-center" style="vertical-align:middle">Total Units (x1000)</th>
                     <th class="text-center" style="vertical-align:middle">Total Value</th>
                     <th class="text-center" style="vertical-align:middle">Ores</th>
                 </thead>
@@ -96,21 +95,18 @@
                 <tr>
                     <td class="text-center" style="vertical-align:middle">{{k}}</td>
                     <td class="text-center" style="vertical-align:middle">{{v.evename.corp}}</td>
-                    <td class="text-center" style="vertical-align:middle">{{v.totals|floatformat:2|intcomma}}</td>
                     <td class="text-center" style="vertical-align:middle">{{v.totals_isk|floatformat:2|intcomma}}</td>
                     <td class="text-center" style="vertical-align:middle"><table id="tbl-{{v.evename.eve_id}}" class="table dataTable table-hover">
                         {% for k1, v1 in v.ores.items %}
                             {% if forloop.first %}
                                 <thead>
                                     <th class="text-center" style="vertical-align:middle">Ore</th>
-                                    <th class="text-center" style="vertical-align:middle">Units (x1000)</th>
                                     <th class="text-center" style="vertical-align:middle">Value</th>
                                 </thead>
                                 <tbody>
                             {% endif %}
                                 <tr class="">
                                     <td class="text-center" style="width:35%; vertical-align:middle">{{ k1 }}</td>
-                                    <td class="text-center" style="width:35%; vertical-align:middle">{{ v1.count|floatformat:2|intcomma }}</td>
                                     <td class="text-center" style="width:35%; vertical-align:middle">{{ v1.value|floatformat:2|intcomma }}</td>
                                 </tr>
                             {% if forloop.last %}

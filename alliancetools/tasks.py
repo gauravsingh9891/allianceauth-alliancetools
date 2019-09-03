@@ -553,6 +553,7 @@ def update_corp_structures(character_id):  # pagnated results
                     _req_scopes = ['esi-assets.read_corporation_assets.v1']
                     _token = _get_token(character_id, req_scopes)
                     if token:
+
                         _c = EsiResponseClient(_token).get_esi_client(response=True)
                         count = 0
                         max_tries = 3
@@ -581,7 +582,7 @@ def update_corp_structures(character_id):  # pagnated results
                                 count = maxTries + 1
                             except bravado.exception.HTTPBadGateway as e:
                                 logger.debug("502 error %s" % str(count))
-                                count += 1
+                            count += 1
 
                 except ObjectDoesNotExist as e:
                     celestial = None
@@ -1699,21 +1700,6 @@ def update_corp_mining_observers(character_id):
                               structure=structure,
                               observer_type=_observer.get('observer_type'))
 
-    def _observation_create(_observer, _last_updated, _observer_id):
-        try:
-            char = EveName.objects.get(eve_id=_observer.get('character_id'))
-        except:
-            logging.exception("message")
-            logger.debug("New char: %s" % str(_observer.get('character_id')))
-            char = _get_new_eve_name(_observer.get('character_id'))
-
-        return MiningObservation(observer=MiningObserver.objects.get(observer_id=_observer_id),
-                              character_id=_observer.get('character_id'),
-                              char = char,
-                              last_updated=_last_updated,
-                              recorded_corporation_id=_observer.get('recorded_corporation_id'),
-                              type_id=_observer.get('type_id'),
-                              quantity=_observer.get('quantity'))
 
     req_scopes = ['esi-industry.read_corporation_mining.v1', 'esi-characters.read_corporation_roles.v1']
     req_roles = ['CEO', 'Director', 'Accountant']
@@ -1763,6 +1749,7 @@ def update_corp_mining_observers(character_id):
             page=ob_page).result()
 
         total_ob_pages = int(result.headers['X-Pages'])
+        logger.debug("ob Page %s/%s" % (str(ob_page), str(total_ob_pages)))
 
         for observer in observers:
             last_updated_datetime = datetime.datetime(
@@ -1809,7 +1796,8 @@ def update_corp_mining_observers(character_id):
                 corporation_id=_corporation.corporation_id,
                 observer_id=observer_id,
                 page=observation_page).result()
-            observation_page = int(result.headers['X-Pages'])
+            total_observation_pages = int(result.headers['X-Pages'])
+            logger.debug("%s Page %s/%s" %(str(observer_id), str(observation_page), str(total_observation_pages)))
             cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(
                 tzinfo=timezone.utc)
 
@@ -1818,12 +1806,30 @@ def update_corp_mining_observers(character_id):
                     observation.get('last_updated').year,
                     observation.get('last_updated').month,
                     observation.get('last_updated').day).replace(tzinfo=timezone.utc)
-                if last_updated_datetime >= latest_db_date:
-                    observations_for_insert.append(_observation_create(observation, last_updated_datetime, observer_id))
+
+                #if last_updated_datetime >= latest_db_date:
+                try:
+                    char = EveName.objects.get(eve_id=observation.get('character_id'))
+                except ObjectDoesNotExist:
+                    #logging.exception("message")
+                    logger.debug("New char: %s" % str(observation.get('character_id')))
+                    try:
+                        char = _get_new_eve_name(observation.get('character_id'))
+                    except:
+                        char = None
+
+                MiningObservation.objects.update_or_create(
+                    observer=MiningObserver.objects.get(observer_id=observer_id),
+                    observing_id=observer_id,
+                    character_id=observation.get('character_id'),
+                    char=char,
+                    last_updated=last_updated_datetime,
+                    recorded_corporation_id=observation.get('recorded_corporation_id'),
+                    type_id=observation.get('type_id'),
+                    defaults={'quantity': observation.get('quantity')})
 
             observation_page += 1
 
-    MiningObservation.objects.bulk_create(observations_for_insert, batch_size=500)
 
     AllianceToolCharacter.objects.filter(character__character_id=character_id).update(
         next_update_moon_obs=cache_expires,

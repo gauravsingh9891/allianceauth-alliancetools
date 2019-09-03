@@ -595,8 +595,9 @@ def observers(request):
 
         observed = MiningObservation.objects.select_related('observer__structure', 'char').all()\
             .annotate(type_name=Subquery(types.values('name')))\
-            .annotate(isk_value=ExpressionWrapper(Subquery(type_price.values('price'))*F('quantity')/100, output_field=FloatField()))#\
-            #.filter(last_updated__gte=datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(days=30))
+            .annotate(isk_value=ExpressionWrapper(Subquery(type_price.values('price'))*F('quantity')/100, output_field=FloatField()))\
+            .filter(last_updated__month=str(datetime.datetime.utcnow().replace(tzinfo=timezone.utc).month-2))\
+            .filter(last_updated__year=str(datetime.datetime.utcnow().replace(tzinfo=timezone.utc).year))
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
 
@@ -613,6 +614,7 @@ def observers(request):
     type_data = {}
     player_data = {}
     earliest_date = datetime.datetime.utcnow().replace(tzinfo=timezone.utc)
+    latest_date = datetime.datetime.utcnow().replace(tzinfo=timezone.utc, year=datetime.MINYEAR)
     total_m3 = 0
     total_isk = 0
 
@@ -638,13 +640,16 @@ def observers(request):
 
         total_m3 = total_m3+i.quantity/1000
         total_isk = total_isk+i.isk_value
-        if i.observer.structure.name not in ob_data:
-            ob_data[i.observer.structure.name] = {}
-            ob_data[i.observer.structure.name]['qty'] = i.quantity/1000
-            ob_data[i.observer.structure.name]['isk'] = i.isk_value
+        str_name = i.observer.observer_id
+        if i.observer.structure:
+            str_name =  i.observer.structure.name
+        if str_name not in ob_data:
+            ob_data[str_name] = {}
+            ob_data[str_name]['qty'] = i.quantity/1000
+            ob_data[str_name]['isk'] = i.isk_value
         else:
-            ob_data[i.observer.structure.name]['qty'] = ob_data[i.observer.structure.name]['qty']+i.quantity/1000
-            ob_data[i.observer.structure.name]['isk'] = ob_data[i.observer.structure.name]['isk']+i.isk_value
+            ob_data[str_name]['qty'] = ob_data[str_name]['qty']+i.quantity/1000
+            ob_data[str_name]['isk'] = ob_data[str_name]['isk']+i.isk_value
 
         if i.type_name not in type_data:
             type_data[i.type_name] = i.quantity/1000
@@ -654,6 +659,9 @@ def observers(request):
         if earliest_date > i.last_updated:
             earliest_date = i.last_updated
 
+        if latest_date < i.last_updated:
+            latest_date = i.last_updated
+
 
 
     context = {
@@ -661,6 +669,7 @@ def observers(request):
         'type_data': type_data,
         'price_data': price_data,
         'earliest_date': earliest_date,
+        'latest_date': latest_date,
         'player_data': player_data,
         'total_m3': total_m3,
         'total_isk': total_isk,

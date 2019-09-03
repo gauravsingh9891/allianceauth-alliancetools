@@ -485,6 +485,7 @@ class MiningObserver(models.Model):
 # Corp Mining Observation
 class MiningObservation(models.Model):
     observer = models.ForeignKey(MiningObserver, on_delete=models.SET_NULL, null=True, default=None, blank=True)
+    observing_id = models.BigIntegerField(null=True, default=None, blank=True)
     char = models.ForeignKey(EveName, on_delete=models.SET_NULL, null=True, default=None)
 
     character_id = models.IntegerField()
