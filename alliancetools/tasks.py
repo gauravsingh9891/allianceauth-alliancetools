@@ -17,6 +17,9 @@ from django.db.models import Sum
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from xml.etree import ElementTree
 from django.db.models import Q
+from django.db.models import Subquery, OuterRef
+from django.db.models import Avg
+from django.db.models import FloatField, F, ExpressionWrapper
 
 from jsonschema.exceptions import ValidationError
 
@@ -25,6 +28,7 @@ import re
 import requests
 import datetime
 import json
+from django.core.serializers.json import DjangoJSONEncoder
 import yaml
 import time
 import bravado
@@ -1741,7 +1745,7 @@ def update_corp_mining_observers(character_id):
     new_observers = []
     ob_page = 1
     total_ob_pages = 1
-    cache_expires = 0
+    cache_expires = None
 
     while ob_page <= total_ob_pages:
         observers, result = c.Industry.get_corporation_corporation_id_mining_observers(
@@ -1786,7 +1790,6 @@ def update_corp_mining_observers(character_id):
         latest_db_date = datetime.datetime.utcnow().replace(tzinfo=timezone.utc, year=datetime.MINYEAR)
     MiningObservation.objects.filter(last_updated=latest_db_date).delete() # purge last day so it can be updated
     observations_for_insert = []
-
     for observer_id in observer_db_list:
 
         observation_page = 1
@@ -1829,7 +1832,6 @@ def update_corp_mining_observers(character_id):
                     defaults={'quantity': observation.get('quantity')})
 
             observation_page += 1
-
 
     AllianceToolCharacter.objects.filter(character__character_id=character_id).update(
         next_update_moon_obs=cache_expires,
@@ -2794,3 +2796,90 @@ def send_fuel_pings():
                     logger.debug("Fuel 14d for %s" % str(struct.name))
                     #soft
 
+
+@shared_task
+def send_mining_values(month=None, year=None):
+
+    if month is None:
+        month = datetime.datetime.utcnow().replace(tzinfo=timezone.utc).month
+    if year is None:
+        year = datetime.datetime.utcnow().replace(tzinfo=timezone.utc).year
+
+    types = TypeName.objects.filter(type_id=OuterRef('type_id'))
+    type_price = OrePrice.objects.filter(item_id=OuterRef('type_id'))
+
+    observed = MiningObservation.objects.select_related('observer__structure', 'char').all() \
+        .annotate(type_name=Subquery(types.values('name'))) \
+        .annotate(isk_value=ExpressionWrapper(Subquery(type_price.values('price')) * F('quantity') / 100,
+                                              output_field=FloatField())) \
+        .filter(last_updated__month=str(month)) \
+        .filter(last_updated__year=str(year))
+    today = datetime.datetime.today().replace(tzinfo=datetime.timezone.utc) - datetime.timedelta(days=30)
+    pdata = MarketHistory.objects.filter(date__gte=today).values('item__name', 'region_id').annotate(davg=Avg('avg'))
+    price_data = {}
+    for pd in pdata:
+        if pd['item__name'] not in price_data:
+            price_data[pd['item__name']] = {}
+        if pd['region_id'] not in price_data[pd['item__name']]:
+            price_data[pd['item__name']][pd['region_id']] = pd
+
+    ob_data = {}
+    player_data = {}
+    earliest_date = datetime.datetime.utcnow().replace(tzinfo=timezone.utc)
+    latest_date = datetime.datetime.utcnow().replace(tzinfo=timezone.utc, year=datetime.MINYEAR)
+    total_m3 = 0
+    total_isk = 0
+
+    for i in observed:
+
+        if i.char.name not in player_data:
+            player_data[str(i.char.name)] = {}
+            player_data[str(i.char.name)]['ores'] = {}
+            player_data[str(i.char.name)]['totals'] = i.quantity
+            player_data[str(i.char.name)]['totals_isk'] = i.isk_value
+            player_data[str(i.char.name)]['char_id'] = i.char.eve_id
+        else:
+            player_data[str(i.char.name)]['totals'] = player_data[str(i.char.name)]['totals'] + i.quantity
+            player_data[str(i.char.name)]['totals_isk'] = player_data[str(i.char.name)]['totals_isk'] + i.isk_value
+
+        if i.type_name not in player_data[str(i.char.name)]['ores']:
+            player_data[str(i.char.name)]['ores'][i.type_name] = {}
+            player_data[str(i.char.name)]['ores'][i.type_name]["value"] = i.isk_value
+            player_data[str(i.char.name)]['ores'][i.type_name]["count"] = i.quantity
+        else:
+            player_data[str(i.char.name)]['ores'][i.type_name]["value"] = player_data[str(i.char.name)]['ores'][i.type_name]["value"]+i.isk_value
+            player_data[str(i.char.name)]['ores'][i.type_name]["count"] = player_data[str(i.char.name)]['ores'][i.type_name]["count"]+i.quantity
+
+        total_m3 = total_m3+i.quantity
+        total_isk = total_isk+i.isk_value
+        str_name = i.observer.observer_id
+        if i.observer.structure:
+            str_name =  i.observer.structure.name
+        if str_name not in ob_data:
+            ob_data[str_name] = {}
+            ob_data[str_name]['qty'] = i.quantity
+            ob_data[str_name]['isk'] = i.isk_value
+            ob_data[str_name]['id'] = i.observer.observer_id
+
+        else:
+            ob_data[str_name]['qty'] = ob_data[str_name]['qty']+i.quantity
+            ob_data[str_name]['isk'] = ob_data[str_name]['isk']+i.isk_value
+
+
+        if earliest_date > i.last_updated:
+            earliest_date = i.last_updated
+
+        if latest_date < i.last_updated:
+            latest_date = i.last_updated
+
+    output = {
+        'observed_data': ob_data,
+        'price_data': price_data,
+        'earliest_date': earliest_date,
+        'latest_date': latest_date,
+        'player_data': player_data,
+        'total_m3': total_m3,
+        'total_isk': total_isk,
+    }
+
+    return json.dumps(output,cls=DjangoJSONEncoder)

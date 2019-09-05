@@ -596,7 +596,7 @@ def observers(request):
         observed = MiningObservation.objects.select_related('observer__structure', 'char').all()\
             .annotate(type_name=Subquery(types.values('name')))\
             .annotate(isk_value=ExpressionWrapper(Subquery(type_price.values('price'))*F('quantity')/100, output_field=FloatField()))\
-            .filter(last_updated__month=str(datetime.datetime.utcnow().replace(tzinfo=timezone.utc).month-2))\
+            .filter(last_updated__month=str(datetime.datetime.utcnow().replace(tzinfo=timezone.utc).month))\
             .filter(last_updated__year=str(datetime.datetime.utcnow().replace(tzinfo=timezone.utc).year))
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')

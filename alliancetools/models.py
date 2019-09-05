@@ -480,6 +480,11 @@ class MiningObserver(models.Model):
     structure = models.ForeignKey(Structure, on_delete=models.SET_NULL, null=True, default=None)
     _observer_enum = Choices('structure')
     observer_type = models.CharField(max_length=10, choices=_observer_enum)
+    observer_name = models.CharField(max_length=100, null=True, default=None)
+
+    #required stuffs for filtering
+    system_name = models.ForeignKey(MapSolarSystem, on_delete=models.SET_NULL, null=True, default=None)
+    closest_celestial = models.ForeignKey(StructureCelestial, on_delete=models.SET_NULL, null=True, default=None)
 
 
 # Corp Mining Observation
@@ -756,3 +761,11 @@ class FuelPing(models.Model):
 
     def __str__(self):
         return "Fuel Ping for: %s" % self.structure.name
+
+class MiningTax:
+    corp = models.ForeignKey(EveCorporationInfo, on_delete=models.CASCADE)
+    tax_rate = models.DecimalField(max_digits=4, decimal_places=2, null=True, default=None)
+    region = models.CharField(max_length=50)
+    constelation = models.CharField(max_length=50)
+    system = models.CharField(max_length=50)
+    moon = models.CharField(max_length=50)
