@@ -4,6 +4,8 @@ import json
 import yaml
 import requests
 
+from math import floor
+
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
 from django.contrib import messages
@@ -21,7 +23,7 @@ from django.db.models import FloatField, F, ExpressionWrapper
 from .models import AllianceToolCharacter, Structure, CorpAsset, AllianceToolJob, AllianceToolJobComment, \
     NotificationPing, Poco, EveName, Notification, MapSolarSystem, TypeName, MoonExtractEvent, MiningObservation, \
     MarketHistory, OrePrice, PublicContractItem, PublicContract, ApiKeyLog, ApiKey, RentalInvoice, AllianceContact, \
-    RentalInvoice, CorporationWalletJournalEntry, StructurePaymentCompleted
+    RentalInvoice, CorporationWalletJournalEntry, StructurePaymentCompleted, MiningObserver
 from .forms import AddJob, AddComment, EditJob
 from .tasks import _get_new_eve_name
 from easyaudit.models import CRUDEvent
@@ -56,6 +58,8 @@ MOONS_REQUIRED_SCOPES = ['esi-corporations.read_structures.v1',
                          'esi-characters.read_corporation_roles.v1',
                          'esi-characters.read_notifications.v1',
                          'esi-industry.read_corporation_mining.v1'] 
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -588,19 +592,37 @@ def structure_timers(request):
 
 
 @login_required
-def observers(request):
+def observers(request, corp_id=None, month=None, year=None):
     if request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings'):
         types = TypeName.objects.filter(type_id=OuterRef('type_id'))
         type_price = OrePrice.objects.filter(item_id=OuterRef('type_id'))
 
-        observed = MiningObservation.objects.select_related('observer__structure', 'char').all()\
-            .annotate(type_name=Subquery(types.values('name')))\
+        observer_corp_list = MiningObserver.objects.all()
+        observer_corps = []
+        for obv in observer_corp_list:
+            if obv.corp not in observer_corps:
+                observer_corps.append(obv.corp)
+
+        if month is None:
+            month = datetime.datetime.utcnow().replace(tzinfo=timezone.utc).month
+        if year is None:
+            year = datetime.datetime.utcnow().replace(tzinfo=timezone.utc).year
+
+        if corp_id and corp_id != '0':
+            observed = MiningObservation.objects.select_related('observer__structure', 'char').filter(observer__corp__corporation_id=corp_id).annotate(type_name=Subquery(types.values('name')))\
             .annotate(isk_value=ExpressionWrapper(Subquery(type_price.values('price'))*F('quantity')/100, output_field=FloatField()))\
-            .filter(last_updated__month=str(datetime.datetime.utcnow().replace(tzinfo=timezone.utc).month))\
-            .filter(last_updated__year=str(datetime.datetime.utcnow().replace(tzinfo=timezone.utc).year))
+            .filter(last_updated__month=str(month))\
+            .filter(last_updated__year=str(year))
+        else:
+            observed = MiningObservation.objects.select_related('observer__structure', 'char').all().annotate(type_name=Subquery(types.values('name')))\
+            .annotate(isk_value=ExpressionWrapper(Subquery(type_price.values('price'))*F('quantity')/100, output_field=FloatField()))\
+            .filter(last_updated__month=str(month))\
+            .filter(last_updated__year=str(year))
+
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
-
+    #logger.debug(observed.query)
+    #logger.debug(observed.count())
     today = datetime.datetime.today().replace(tzinfo=datetime.timezone.utc) - datetime.timedelta(days=30)
     pdata = MarketHistory.objects.filter(date__gte=today).values('item__name', 'region_id').annotate(davg=Avg('avg'))
     price_data = {}
@@ -662,9 +684,16 @@ def observers(request):
         if latest_date < i.last_updated:
             latest_date = i.last_updated
 
-
-
+    i=0
+    month_filter=[]
+    now = datetime.datetime.utcnow().replace(tzinfo=timezone.utc)
+    while i < 5:
+        month = ((now.month-1-i)%12+1)
+        year = (now.year+floor((now.month-i)/12))
+        month_filter.append({'month':month, 'year':year})
+        i += 1
     context = {
+        'observer_corps': observer_corps,
         'observed_data': ob_data,
         'type_data': type_data,
         'price_data': price_data,
@@ -673,8 +702,9 @@ def observers(request):
         'player_data': player_data,
         'total_m3': total_m3,
         'total_isk': total_isk,
+        'corp_id': corp_id,
+        'month_filter': month_filter
     }
-
 
     return render(request, 'alliancetools/observers.html', context=context)
 
@@ -778,8 +808,6 @@ def str_txfrs(request):
         'notifs': notification_list
     }
     return render(request, 'alliancetools/structures_txfr.html', context=context)
-
-logger = logging.getLogger(__name__)
 
 @csrf_exempt
 def input_json_api(request):

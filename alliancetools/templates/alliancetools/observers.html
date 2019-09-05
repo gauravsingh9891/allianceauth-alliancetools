@@ -3,9 +3,46 @@
 {% load static %}
 {% load humanize %}
 {% load alliancetools_tags %}
+{% load navactive %}
+
+
 {% block at_block %}
     <h2 class="text-center">Mining Ledger!</h2>
     <p class="text-center">Begining at: {{earliest_date|date:"Y-m-d"}} <br> Ending at: {{latest_date|date:"Y-m-d"}} <br> Total Value: {{total_isk|floatformat:2|intcomma}}</p>
+    {% if observer_corps %}
+    <nav class="navbar navbar-default">
+        <div class="container-fluid">
+            <ul class="nav navbar-nav navbar-left">
+                    <li ><a href="{% url 'alliancetools:observers' %}">All</a></li>
+
+                    {% for c in observer_corps %}
+                        <li ><a href="{% url 'alliancetools:observers' c.corporation_id %}">{{c}}</a></li>
+                    {% empty %}
+
+                    {% endfor %}
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                <li class="dropdown" style="margin-right: 5px">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"> Months <span class="fa fa-plus"></span> </a>
+                    <ul class="dropdown-menu">
+                        {% for d in month_filter %}
+                            {% if corp_id %}
+                                <li ><a href="{% url 'alliancetools:observers' corp_id d.month d.year %}">{{ d.year }}-{{ d.month }}</a></li>
+                            {% else %}
+                                <li ><a href="{% url 'alliancetools:observers' 0 d.month d.year %}">{{ d.year }}-{{ d.month }}</a></li>
+                            {% endif %}
+                        {% endfor %}
+                    </ul>
+                </li>
+            </ul>
+
+
+        </div>
+    </nav>
+    {% else %}
+    <div class="alert alert-warning text-center">{% trans "No corps Available" %}</div>
+    {% endif %}
+
     {% if observed_data %}
 
         <div class="row hidden">

@@ -1692,8 +1692,12 @@ def update_corp_mining_observers(character_id):
 
     def _observer_create(_corp, _observer, _last_updated):
         structure = None
+        system_name = None
+        closest_celestial = None
         try:
             structure = Structure.objects.get(structure_id=observer.get('observer_id'))
+            system_name = structure.system_name
+            closest_celestial = structure.closest_celestial
         except ObjectDoesNotExist:
             # structure not in db yet ( probably due to cache we can try again next time. )
             pass
@@ -1702,6 +1706,8 @@ def update_corp_mining_observers(character_id):
                               last_updated=_last_updated,
                               observer_id=_observer.get('observer_id'),
                               structure=structure,
+                              system_name=system_name,
+                              closest_celestial=closest_celestial,
                               observer_type=_observer.get('observer_type'))
 
 
@@ -1767,18 +1773,27 @@ def update_corp_mining_observers(character_id):
                 observer_db_list.append(observer.get('observer_id'))
             else:
                 structure = None
+                system_name = None
+                closest_celestial = None
                 try:
                     structure = Structure.objects.get(structure_id=observer.get('observer_id'))
-                except ObjectDoesNotExist:
-                    # structure not in db yet ( probably due to cache we can try again next time. )
-                    pass
+                    system_name = structure.system_name
+                    closest_celestial = structure.closest_celestial
 
-                MiningObserver.objects.filter(observer_id=observer.get('observer_id')).update(
-                    last_updated=last_updated_datetime,
-                    observer_id=observer.get('observer_id'),
-                    structure=structure,
-                    observer_type=observer.get('observer_type')
-                )
+                    MiningObserver.objects.filter(observer_id=observer.get('observer_id')).update(
+                        last_updated=last_updated_datetime,
+                        structure=structure,
+                        system_name=system_name,
+                        closest_celestial=closest_celestial,
+                        observer_type=observer.get('observer_type')
+                    )
+
+                except ObjectDoesNotExist:
+                    MiningObserver.objects.filter(observer_id=observer.get('observer_id')).update(
+                        last_updated=last_updated_datetime,
+                        observer_type=observer.get('observer_type')
+                    )
+
         ob_page += 1
 
     MiningObserver.objects.bulk_create(new_observers, batch_size=500)
