@@ -1354,7 +1354,7 @@ def send_discord_pings(self):
             custom_headers = {'Content-Type': 'application/json'}
             alertText = ""
             if data['alert_ping']:
-                alertText = "@everyone"  # or @here
+                alertText = "@here"  # or @everyone, but not cause snowflakes :angrykissing:
             chunks = [data['embeds'][i:i + 5] for i in range(0, len(data['embeds']), 5)]
             for chunk in chunks:
                 try:
