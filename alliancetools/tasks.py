@@ -1732,7 +1732,7 @@ def update_corp_mining_observers(character_id):
             time.sleep(1)
 
     # check roles!
-    roles, result = c.Character.get_characters_character_id_roles(character_id=character_id).result()
+    roles, result_roles = c.Character.get_characters_character_id_roles(character_id=character_id).result()
 
     has_roles = False
     for role in roles.get('roles', []):
@@ -1757,7 +1757,7 @@ def update_corp_mining_observers(character_id):
         observers, result = c.Industry.get_corporation_corporation_id_mining_observers(
             corporation_id=_corporation.corporation_id,
             page=ob_page).result()
-
+        logger.debug(result.headers)
         total_ob_pages = int(result.headers['X-Pages'])
         logger.debug("ob Page %s/%s" % (str(ob_page), str(total_ob_pages)))
 
@@ -1803,7 +1803,6 @@ def update_corp_mining_observers(character_id):
         latest_db_date = MiningObservation.objects.all().order_by('-last_updated')[0].last_updated
     except:
         latest_db_date = datetime.datetime.utcnow().replace(tzinfo=timezone.utc, year=datetime.MINYEAR)
-    MiningObservation.objects.filter(last_updated=latest_db_date).delete() # purge last day so it can be updated
     observations_for_insert = []
     for observer_id in observer_db_list:
 
@@ -1814,6 +1813,9 @@ def update_corp_mining_observers(character_id):
                 corporation_id=_corporation.corporation_id,
                 observer_id=observer_id,
                 page=observation_page).result()
+            logger.debug(result.headers)
+            logger.debug(len(ob_list))
+
             total_observation_pages = int(result.headers['X-Pages'])
             logger.debug("%s Page %s/%s" %(str(observer_id), str(observation_page), str(total_observation_pages)))
             cache_expires = datetime.datetime.strptime(result.headers['Expires'], '%a, %d %b %Y %H:%M:%S GMT').replace(
@@ -1845,6 +1847,7 @@ def update_corp_mining_observers(character_id):
                     recorded_corporation_id=observation.get('recorded_corporation_id'),
                     type_id=observation.get('type_id'),
                     defaults={'quantity': observation.get('quantity')})
+                logger.debug("%s at %s %s/%s" % (str(observer_id), str(last_updated_datetime), str(char.name), str(observation.get('type_id'))))
 
             observation_page += 1
 
@@ -1874,9 +1877,6 @@ def update_ore_prices():
                                                              'avg': history.attrib['avgPrice'],
                                                              'move': history.attrib['movement'],
                                                              'orders': history.attrib['numOrders']})
-            if ob.item.name not in price_cache:
-                price_cache[ob.item.name] = {}
-            price_cache[ob.item.name]['fountain'] = float(ob.avg)
 
     print("Forge")
     url = "https://goonmetrics.apps.goonswarm.org/api/price_history/?region_id=10000002&type_id=34,35,36,37,38,39,40,16634,16643,16647,16641,16640,16650,16635,16648,16633,16646,16651,16644,16652,16639,16636,16649,16638,16653,16637,16642,11399"
@@ -1892,9 +1892,6 @@ def update_ore_prices():
                                                                  'avg': history.attrib['avgPrice'],
                                                                  'move': history.attrib['movement'],
                                                                  'orders': history.attrib['numOrders']})
-            if ob.item.name not in price_cache:
-                price_cache[ob.item.name] = {}
-            price_cache[ob.item.name]['the_forge'] = float(ob.avg)
 
     print("Delve")
     url = "https://goonmetrics.apps.goonswarm.org/api/price_history/?region_id=10000060&type_id=34,35,36,37,38,39,40,16634,16643,16647,16641,16640,16650,16635,16648,16633,16646,16651,16644,16652,16639,16636,16649,16638,16653,16637,16642,11399"
@@ -1911,11 +1908,19 @@ def update_ore_prices():
                                                              'avg': history.attrib['avgPrice'],
                                                              'move': history.attrib['movement'],
                                                              'orders': history.attrib['numOrders']})
-            if ob.item.name not in price_cache:
-                price_cache[ob.item.name] = {}
-            price_cache[ob.item.name]['delve'] = float(ob.avg)
 
-    ores = {  "Cobaltite": {
+
+    url = "https://api.evemarketer.com/ec/marketstat/json?regionlimit=10000060&typeid=34,35,36,37,38,39,40,16634,16643,16647,16641,16640,16650,16635,16648,16633,16646,16651,16644,16652,16639,16636,16649,16638,16653,16637,16642,11399"
+    response = requests.get(url)
+    price_data = response.json()
+    for item in price_data :
+        name = TypeName.objects.get(type_id=item['buy']['forQuery']['types'][0]).name
+        if name not in price_cache:
+            price_cache[name] = {}
+        price_cache[name]['the_forge'] = float(item['buy']['fivePercent'])
+
+    ores = {
+        "Cobaltite": {
                 "Cobalt": 40,
                 "Mexallon": 500,
                 "Pyerite": 10000,
