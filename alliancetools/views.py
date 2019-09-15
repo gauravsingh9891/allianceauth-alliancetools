@@ -621,7 +621,7 @@ def observers(request, corp_id=None, month=None, year=None):
 
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
-    #logger.debug(observed.query)
+    logger.debug(observed.query)
     #logger.debug(observed.count())
     today = datetime.datetime.today().replace(tzinfo=datetime.timezone.utc) - datetime.timedelta(days=30)
     pdata = MarketHistory.objects.filter(date__gte=today).values('item__name', 'region_id').annotate(davg=Avg('avg'))

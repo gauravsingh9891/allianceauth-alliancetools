@@ -6,7 +6,7 @@ from .models import CorpAsset, ItemName, TypeName, Structure, Notification, Corp
     CorporationWalletDivision, AllianceToolCharacter, StructureService, BridgeOzoneLevel, MapSolarSystem, EveName, \
     NotificationAlert, NotificationPing, Poco, PocoCelestial, AssetLocation, MoonExtractEvent, MiningObservation, \
     MiningObserver, MarketHistory, OrePrice, PublicContract, PublicContractItem, PublicContractSearch, AllianceContact, \
-    AllianceContactLabel, FuelPing, FuelNotifierFilter, StructureCelestial
+    AllianceContactLabel, FuelPing, FuelNotifierFilter, StructureCelestial, MiningTax
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo, EveAllianceInfo
 from esi.models import Token
 from .esi_workaround import EsiResponseClient, esi_client_factory
@@ -1129,6 +1129,10 @@ def send_discord_pings(self):
                         timestamp = notification.timestamp
                         corp_ticker = notification.character.character.corporation_ticker
                         corp_id = notification.character.character.corporation_id
+                        shld = float(notification_data['shieldPercentage'])
+                        armr = float(notification_data['armorPercentage'])
+                        hull = float(notification_data['hullPercentage'])
+                        body = "{0}\n[ S: {1:.2f}% A: {2:.2f}% H: {3:.2f}% ]".format(body, shld, armr, hull)
                         footer = {"icon_url": "https://imageserver.eveonline.com/Corporation/%s_64.png" % (str(corp_id)),
                                   "text": "%s (%s)" % (notification.character.character.corporation_name, corp_ticker)}
 
@@ -2819,87 +2823,99 @@ def send_fuel_pings():
 
 @shared_task
 def send_mining_values(month=None, year=None):
-
+    taxes = MiningTax.objects.all()
     if month is None:
         month = datetime.datetime.utcnow().replace(tzinfo=timezone.utc).month
     if year is None:
         year = datetime.datetime.utcnow().replace(tzinfo=timezone.utc).year
 
-    types = TypeName.objects.filter(type_id=OuterRef('type_id'))
-    type_price = OrePrice.objects.filter(item_id=OuterRef('type_id'))
-
-    observed = MiningObservation.objects.select_related('observer__structure', 'char').all() \
-        .annotate(type_name=Subquery(types.values('name'))) \
-        .annotate(isk_value=ExpressionWrapper(Subquery(type_price.values('price')) * F('quantity') / 100,
-                                              output_field=FloatField())) \
-        .filter(last_updated__month=str(month)) \
-        .filter(last_updated__year=str(year))
-    today = datetime.datetime.today().replace(tzinfo=datetime.timezone.utc) - datetime.timedelta(days=30)
-    pdata = MarketHistory.objects.filter(date__gte=today).values('item__name', 'region_id').annotate(davg=Avg('avg'))
-    price_data = {}
-    for pd in pdata:
-        if pd['item__name'] not in price_data:
-            price_data[pd['item__name']] = {}
-        if pd['region_id'] not in price_data[pd['item__name']]:
-            price_data[pd['item__name']][pd['region_id']] = pd
-
     ob_data = {}
     player_data = {}
-    earliest_date = datetime.datetime.utcnow().replace(tzinfo=timezone.utc)
-    latest_date = datetime.datetime.utcnow().replace(tzinfo=timezone.utc, year=datetime.MINYEAR)
-    total_m3 = 0
-    total_isk = 0
 
-    for i in observed:
+    for tax in taxes:
 
-        if i.char.name not in player_data:
-            player_data[str(i.char.name)] = {}
-            player_data[str(i.char.name)]['ores'] = {}
-            player_data[str(i.char.name)]['totals'] = i.quantity
-            player_data[str(i.char.name)]['totals_isk'] = i.isk_value
-            player_data[str(i.char.name)]['char_id'] = i.char.eve_id
-        else:
-            player_data[str(i.char.name)]['totals'] = player_data[str(i.char.name)]['totals'] + i.quantity
-            player_data[str(i.char.name)]['totals_isk'] = player_data[str(i.char.name)]['totals_isk'] + i.isk_value
+        types = TypeName.objects.filter(type_id=OuterRef('type_id'))
+        type_price = OrePrice.objects.filter(item_id=OuterRef('type_id'))
 
-        if i.type_name not in player_data[str(i.char.name)]['ores']:
-            player_data[str(i.char.name)]['ores'][i.type_name] = {}
-            player_data[str(i.char.name)]['ores'][i.type_name]["value"] = i.isk_value
-            player_data[str(i.char.name)]['ores'][i.type_name]["count"] = i.quantity
-        else:
-            player_data[str(i.char.name)]['ores'][i.type_name]["value"] = player_data[str(i.char.name)]['ores'][i.type_name]["value"]+i.isk_value
-            player_data[str(i.char.name)]['ores'][i.type_name]["count"] = player_data[str(i.char.name)]['ores'][i.type_name]["count"]+i.quantity
+        observed = MiningObservation.objects.select_related('observer__structure', 'char').all() \
+            .annotate(type_name=Subquery(types.values('name'))) \
+            .annotate(isk_value=ExpressionWrapper(Subquery(type_price.values('price')) * F('quantity') / 100 * tax.tax_rate,
+                                                  output_field=FloatField())) \
+            .filter(last_updated__month=str(month)) \
+            .filter(last_updated__year=str(year))
+        if tax.region:
+            observed = observed.filter(observer__structure__system_name__regionName=tax.region)
+        if tax.constellation:
+            observed = observed.filter(observer__structure__system_name__constellationName=tax.constellation)
+        if tax.system:
+            observed = observed.filter(observer__structure__system_name__systemName=tax.system)
 
-        total_m3 = total_m3+i.quantity
-        total_isk = total_isk+i.isk_value
-        str_name = i.observer.observer_id
-        if i.observer.structure:
-            str_name =  i.observer.structure.name
-        if str_name not in ob_data:
-            ob_data[str_name] = {}
-            ob_data[str_name]['qty'] = i.quantity
-            ob_data[str_name]['isk'] = i.isk_value
-            ob_data[str_name]['id'] = i.observer.observer_id
+        today = datetime.datetime.today().replace(tzinfo=datetime.timezone.utc) - datetime.timedelta(days=30)
+        pdata = MarketHistory.objects.filter(date__gte=today).values('item__name', 'region_id').annotate(davg=Avg('avg'))
+        price_data = {}
+        for pd in pdata:
+            if pd['item__name'] not in price_data:
+                price_data[pd['item__name']] = {}
+            if pd['region_id'] not in price_data[pd['item__name']]:
+                price_data[pd['item__name']][pd['region_id']] = pd
 
-        else:
-            ob_data[str_name]['qty'] = ob_data[str_name]['qty']+i.quantity
-            ob_data[str_name]['isk'] = ob_data[str_name]['isk']+i.isk_value
+        earliest_date = datetime.datetime.utcnow().replace(tzinfo=timezone.utc)
+        latest_date = datetime.datetime.utcnow().replace(tzinfo=timezone.utc, year=datetime.MINYEAR)
+        total_m3 = 0
+        total_isk = 0
+
+        for i in observed:
+
+            if i.char.name not in player_data:
+                player_data[str(i.char.name)] = {}
+                player_data[str(i.char.name)]['ores'] = {}
+                player_data[str(i.char.name)]['totals'] = i.quantity
+                player_data[str(i.char.name)]['totals_isk'] = i.isk_value
+                player_data[str(i.char.name)]['tax_isk'] = i.isk_value * tax.tax_rate
+                player_data[str(i.char.name)]['char_id'] = i.char.eve_id
+            else:
+                player_data[str(i.char.name)]['totals'] = player_data[str(i.char.name)]['totals'] + i.quantity
+                player_data[str(i.char.name)]['totals_isk'] = player_data[str(i.char.name)]['totals_isk'] + i.isk_value
+                player_data[str(i.char.name)]['tax_isk'] = player_data[str(i.char.name)]['tax_isk'] + i.isk_value * tax.tax_rate
+
+            if i.type_name not in player_data[str(i.char.name)]['ores']:
+                player_data[str(i.char.name)]['ores'][i.type_name] = {}
+                player_data[str(i.char.name)]['ores'][i.type_name]["value"] = i.isk_value
+                player_data[str(i.char.name)]['ores'][i.type_name]["count"] = i.quantity
+            else:
+                player_data[str(i.char.name)]['ores'][i.type_name]["value"] = player_data[str(i.char.name)]['ores'][i.type_name]["value"]+i.isk_value
+                player_data[str(i.char.name)]['ores'][i.type_name]["count"] = player_data[str(i.char.name)]['ores'][i.type_name]["count"]+i.quantity
+
+            total_m3 = total_m3+i.quantity
+            total_isk = total_isk+i.isk_value
+            str_name = i.observer.observer_id
+            if i.observer.structure:
+                str_name =  i.observer.structure.name
+            if str_name not in ob_data:
+                ob_data[str_name] = {}
+                ob_data[str_name]['qty'] = i.quantity
+                ob_data[str_name]['isk'] = i.isk_value
+                ob_data[str_name]['id'] = i.observer.observer_id
+
+            else:
+                ob_data[str_name]['qty'] = ob_data[str_name]['qty']+i.quantity
+                ob_data[str_name]['isk'] = ob_data[str_name]['isk']+i.isk_value
 
 
-        if earliest_date > i.last_updated:
-            earliest_date = i.last_updated
+            if earliest_date > i.last_updated:
+                earliest_date = i.last_updated
 
-        if latest_date < i.last_updated:
-            latest_date = i.last_updated
+            if latest_date < i.last_updated:
+                latest_date = i.last_updated
 
-    output = {
-        'observed_data': ob_data,
-        'price_data': price_data,
-        'earliest_date': earliest_date,
-        'latest_date': latest_date,
-        'player_data': player_data,
-        'total_m3': total_m3,
-        'total_isk': total_isk,
-    }
+        output = {
+            'observed_data': ob_data,
+            'price_data': price_data,
+            'earliest_date': earliest_date,
+            'latest_date': latest_date,
+            'player_data': player_data,
+            'total_m3': total_m3,
+            'total_isk': total_isk,
+        }
 
-    return json.dumps(output,cls=DjangoJSONEncoder)
+        return json.dumps(output,cls=DjangoJSONEncoder)

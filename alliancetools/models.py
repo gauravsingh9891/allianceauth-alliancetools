@@ -762,10 +762,10 @@ class FuelPing(models.Model):
     def __str__(self):
         return "Fuel Ping for: %s" % self.structure.name
 
-class MiningTax:
+class MiningTax(models.Model):
     corp = models.ForeignKey(EveCorporationInfo, on_delete=models.CASCADE)
-    tax_rate = models.DecimalField(max_digits=4, decimal_places=2, null=True, default=None)
-    region = models.CharField(max_length=50)
-    constelation = models.CharField(max_length=50)
-    system = models.CharField(max_length=50)
-    moon = models.CharField(max_length=50)
+    tax_rate = models.DecimalField(max_digits=4, decimal_places=2)
+    region = models.CharField(max_length=50, null=True, default=None, blank=True)
+    constellation = models.CharField(max_length=50, null=True, default=None, blank=True)
+    system = models.CharField(max_length=50, null=True, default=None, blank=True)
+    moon = models.CharField(max_length=50, null=True, default=None, blank=True)
