@@ -685,10 +685,20 @@ def update_corp_structures(character_id):  # pagnated results
                     structure_id=structure.get('structure_id')).result()
             except:  # if bad screw it...
                 structure_info = False
-            structure_ob, created = _structures_db_update(_corporation,
+
+            try:
+                structure_ob, created = _structures_db_update(_corporation,
                                                           structure,
                                                           structure_info['name'] if structure_info else str(
                                                               structure.get('structure_id')))
+            except MultipleObjectsReturned:
+                id_of_first = Structure.objects.filter(structure_id=structure.get('structure_id')).order_by("id")[0].id
+                Structure.objects.filter(structure_id=structure.get('structure_id')).exclude(id=id_of_first).delete()
+                structure_ob, created = _structures_db_update(_corporation,
+                                                              structure,
+                                                              structure_info['name'] if structure_info else str(
+                                                                  structure.get('structure_id')))
+
             structure_ids.append(structure_ob.structure_id)
 
         structure_pages += 1
@@ -1817,8 +1827,8 @@ def update_corp_mining_observers(character_id):
                 corporation_id=_corporation.corporation_id,
                 observer_id=observer_id,
                 page=observation_page).result()
-            logger.debug(result.headers)
-            logger.debug(len(ob_list))
+            #logger.debug(result.headers)
+            #logger.debug(len(ob_list))
 
             total_observation_pages = int(result.headers['X-Pages'])
             logger.debug("%s Page %s/%s" %(str(observer_id), str(observation_page), str(total_observation_pages)))
@@ -1851,7 +1861,7 @@ def update_corp_mining_observers(character_id):
                     recorded_corporation_id=observation.get('recorded_corporation_id'),
                     type_id=observation.get('type_id'),
                     defaults={'quantity': observation.get('quantity')})
-                logger.debug("%s at %s %s/%s" % (str(observer_id), str(last_updated_datetime), str(char.name), str(observation.get('type_id'))))
+                #logger.debug("%s at %s %s/%s" % (str(observer_id), str(last_updated_datetime), str(char.name), str(observation.get('type_id'))))
 
             observation_page += 1
 
