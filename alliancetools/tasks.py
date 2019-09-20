@@ -46,23 +46,11 @@ def _get_token(character_id, scopes):
     except:
         return False
 
-
-def _get_new_eve_name(entity_id):
-
-    custom_headers = {'Content-Type': 'application/json'}
-    custom_data = [entity_id]
-    r = requests.post("https://esi.evetech.net/latest/universe/names/?datasource=tranquility",
-                  headers=custom_headers,
-                  data=json.dumps(custom_data))
-    result = r.json()
-    name = result[0].get('name', "")
-    category = result[0].get('category', "")
-    id = result[0].get('id', "")
-
-    if int(id) == int(entity_id):
-        new_name = EveName(name=name, category=category, eve_id=id)
-        if category == "character":
-            url = "https://esi.evetech.net/latest/characters/%s/?datasource=tranquility" % str(id)
+def _evename_update(new_name):
+    try:
+        custom_headers = {'Content-Type': 'application/json'}
+        if new_name.category == "character":
+            url = "https://esi.evetech.net/latest/characters/%s/?datasource=tranquility" % str(new_name.eve_id)
             r = requests.get(url)
             result = r.json()
             if result.get('alliance_id', False):
@@ -84,8 +72,8 @@ def _get_new_eve_name(entity_id):
                                   data=json.dumps(custom_data))
                 result = r.json()
                 new_name.corp = result[0].get('name')
-        if category == "corporation":
-            url = "https://esi.evetech.net/latest/characters/%s/?datasource=tranquility" % str(id)
+        if new_name.category == "corporation":
+            url = "https://esi.evetech.net/latest/characters/%s/?datasource=tranquility" % str(new_name.eve_id)
             r = requests.get(url)
             result = r.json()
             if result.get('alliance_id', False):
@@ -95,13 +83,43 @@ def _get_new_eve_name(entity_id):
                                   data=json.dumps(custom_data))
                 result = r.json()
                 new_name.alliance = result[0].get('name')
+        return new_name
+    except:
+        logging.exception("Messsage")
+#        return False
 
+def _get_new_eve_name(entity_id):
+
+    custom_headers = {'Content-Type': 'application/json'}
+    custom_data = [entity_id]
+    r = requests.post("https://esi.evetech.net/latest/universe/names/?datasource=tranquility",
+                  headers=custom_headers,
+                  data=json.dumps(custom_data))
+    result = r.json()
+    name = result[0].get('name', "")
+    category = result[0].get('category', "")
+    id = result[0].get('id', "")
+
+    if int(id) == int(entity_id):
+        new_name = EveName(name=name, category=category, eve_id=id)
+        logger.debug("updating: %s" % str(new_name.name))
+        _evename_update(new_name)
         new_name.save()
 
         return new_name
     else:
         return False
 
+
+@shared_task
+def update_eve_names():
+    names = EveName.objects.filter(
+        last_update__lt=(datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(hours=336)))[:500]
+    for name in names:
+        _evename_update(name)
+        name.save()
+        logger.debug("Saved: %s" % name.name)
+    return names.count()
 
 @shared_task
 def update_character_notifications(character_id):
@@ -1771,7 +1789,7 @@ def update_corp_mining_observers(character_id):
         observers, result = c.Industry.get_corporation_corporation_id_mining_observers(
             corporation_id=_corporation.corporation_id,
             page=ob_page).result()
-        logger.debug(result.headers)
+        #logger.debug(result.headers)
         total_ob_pages = int(result.headers['X-Pages'])
         logger.debug("ob Page %s/%s" % (str(ob_page), str(total_ob_pages)))
 
@@ -2929,3 +2947,5 @@ def send_mining_values(month=None, year=None):
         }
 
         return json.dumps(output,cls=DjangoJSONEncoder)
+
+

@@ -17,6 +17,7 @@ class EveName(models.Model):
     corp = models.CharField(max_length=500, null=True, default=None)
     alliance = models.CharField(max_length=500, null=True, default=None)
 
+    last_update = models.DateTimeField(auto_now=True)
 
 class ItemName(models.Model):
     name = models.CharField(max_length=500)
