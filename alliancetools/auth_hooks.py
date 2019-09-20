@@ -43,6 +43,19 @@ class TimerMenu(MenuItemHook):
             return MenuItemHook.render(self, request)
         return ''
 
+class MoonTimerMenu(MenuItemHook):
+    def __init__(self):
+        MenuItemHook.__init__(self, 'Moon Extractions',
+                              'fa fa-moon-o fa-fw',
+                              'alliancetools:moons',
+                              navactive=['alliancetools:moons'])
+
+    def render(self, request):
+        if request.user.has_perm('alliancetools.view_moonextractevent'):
+            return MenuItemHook.render(self, request)
+        return ''
+
+
 
 class PocoMenu(MenuItemHook):
     def __init__(self):
@@ -110,6 +123,10 @@ def register_menu():
 @hooks.register('menu_item_hook')
 def register_menu():
     return TimerMenu()
+
+@hooks.register('menu_item_hook')
+def register_menu():
+    return MoonTimerMenu()
 
 @hooks.register('menu_item_hook')
 def register_menu():

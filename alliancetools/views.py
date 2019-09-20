@@ -517,7 +517,7 @@ def fuel_levels(request):
 
 @login_required
 def extractions(request):
-    if request.user.has_perm('alliancetools.access_alliance_tools_structure_fittings'):
+    if request.user.has_perm('alliancetools.view_moonextractevent'):
         today = datetime.datetime.today().replace(tzinfo= datetime.timezone.utc) -  datetime.timedelta(days=1)
 
         events = MoonExtractEvent.objects\
