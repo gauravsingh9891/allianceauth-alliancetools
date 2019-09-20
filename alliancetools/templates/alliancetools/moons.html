@@ -8,28 +8,24 @@
             <table id="table-structs" class="table table-hover dataTable">
                 <thead>
                     <th class="text-center">Arival</th>
-                    <th class="text-center">Decay</th>
-                    <th class="text-center">name</th>
-                    <th class="text-center">name</th>
+                    <th class="text-center">Structure</th>
+                    <th class="text-center">Moon</th>
                     <th class="text-center">Region</th>
                     <th class="text-center">Constellation</th>
                     <th class="text-center">Corp</th>
-                    <th class="text-center">Type</th>
-                    <th class="text-center">dump</th>
+                    <th class="text-center">Ores</th>
                 </thead>
                 <tbody>
                 {% for event in events %}
                 <tr>
-                    <td class="text-center">{{event.db.arrival_time|date:"Y-m-d H:i"}}</td>
-                    <td class="text-center">{{event.db.decay_time|date:"Y-m-d H:i"}}</td>
-                    <td class="text-center">{{ event.db.structure.name }}</td>
-                    <td class="text-center">{{ event.db.moon_name.name }}</td>
-                    <td class="text-center">{{ event.db.structure.system_name.regionName }}</td>
-                    <td class="text-center">{{ event.db.structure.system_name.constellationName }}</td>
-                    <td class="text-center">{{ event.db.corp.corporation_name }}</td>
-                    <td class="text-center">{{ event.db.structure.type_name.name }}</td>
-                    <td class="text-center">{% for v in event.array.ore %}
-                    <p>{{ v.name }} ({{v.percent|floatformat:2|intcomma}}%)<br><b>{{v.m3|floatformat:2|intcomma}}m3</b></p>
+                    <td class="text-center" style="vertical-align:middle">{{event.db.arrival_time|date:"Y-m-d H:i"}}</td>
+                    <td class="text-center" style="vertical-align:middle">{{ event.db.structure.name }}<br><span class="label label-default">{{ event.db.corp.corporation_name }}</span></td>
+                    <td class="text-center" style="vertical-align:middle">{{ event.db.moon_name.name }}</td>
+                    <td class="text-center" style="vertical-align:middle">{{ event.db.structure.system_name.regionName }}</td>
+                    <td class="text-center" style="vertical-align:middle">{{ event.db.structure.system_name.constellationName }}</td>
+                    <td class="text-center" style="vertical-align:middle">{{ event.db.corp.corporation_name }}</td>
+                    <td class="text-center" style="vertical-align:middle">{% for v in event.array.ore %}
+                        <span {{ v.name|ore_color}} class="label label-default"><b>{{ v.name }}</b> ({{v.percent|floatformat:2|intcomma}}% - {{v.m3|intword}} m3)</span><br>
                     {% endfor %} </td>
                 </tr>
                 {% empty %}
@@ -50,18 +46,23 @@
         $('#table-structs').DataTable({
             "filterDropDown": {
 					columns: [{
+						idx: 3
+                            },
+                            {
 						idx: 4
                             },
                             {
 						idx: 5
-                            },
-                            {
-						idx: 6
                             }],
                     bootstrap: true
             },
+            "columnDefs": [
+                { "searchable": false, "targets": [0] },
+                { "sortable": false, "targets": [6] },
+                { "visible": false, "targets": [3, 5] }
+            ],
             "order": [
-                [1, "desc"]
+                [1, "desc"],
             ],
             "pageLength": 25
         });
