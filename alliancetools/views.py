@@ -68,15 +68,15 @@ def dashboard(request):
         if(request.user.has_perm('alliancetools.admin_alliance_tools')):
             main_characters = AllianceToolCharacter.objects.all()
         elif request.user.has_perm('alliancetools.corp_level_alliance_tools'):
+            corp_ids = request.user.character_ownerships.all().values('character__corporation_id')
             main_characters = AllianceToolCharacter.objects.filter(
-                character__corporation_id=request.user.profile.main_character.corporation_id)
+                character__corporation_id__in=corp_ids)
         else:
             raise PermissionDenied('You do not have permission to be here. This has been Logged!')
 
         context = {
             'alts': main_characters,
-            'add_tokens' : request.user.has_perm('alliancetools.admin_alliance_tools'),
-            'add_structs': request.user.has_perm('alliancetools.corp_level_alliance_tools')
+            'show_menu': True
         }
 
         if request.user.has_perm('alliancetools.admin_alliance_tools'):
@@ -112,7 +112,7 @@ def jobs_board(request):
 
 
 @login_required
-@permission_required('alliancetools.admin_alliance_tools')
+@permission_required('alliancetools.add_alliancetoolcharacter')
 @token_required(scopes=CORP_REQUIRED_SCOPES)
 def alliancetools_add_char(request, token):
     try:
@@ -126,7 +126,7 @@ def alliancetools_add_char(request, token):
 
 
 @login_required
-@permission_required('alliancetools.admin_alliance_tools')
+@permission_required('alliancetools.add_alliancecontact')
 @token_required(scopes=CONTACTS_REQUIRED_SCOPES)
 def alliancetools_add_contacts(request, token):
     try:
@@ -140,7 +140,7 @@ def alliancetools_add_contacts(request, token):
 
 
 @login_required
-@permission_required('alliancetools.admin_alliance_tools')
+@permission_required('alliancetools.add_poco')
 @token_required(scopes=POCO_REQUIRED_SCOPES)
 def alliancetools_add_poco(request, token):
     try:
@@ -154,7 +154,7 @@ def alliancetools_add_poco(request, token):
 
 
 @login_required
-@permission_required('alliancetools.admin_alliance_tools')
+@permission_required('alliancetools.add_moonextractevent')
 @token_required(scopes=MOONS_REQUIRED_SCOPES)
 def alliancetools_add_moons(request, token):
     try:
@@ -168,7 +168,7 @@ def alliancetools_add_moons(request, token):
 
 
 @login_required
-@permission_required('alliancetools.corp_level_alliance_tools')
+@permission_required('alliancetools.add_structure')
 @token_required(scopes=STRUCTURES_REQUIRED_SCOPES)
 def alliancetools_add_structures(request, token):
     try:
@@ -527,7 +527,7 @@ def extractions(request):
                             'moon_name',
                             'notification',
                             'corp')\
-            .filter(arrival_time__gte=today)
+            .filter(arrival_time__gte=today).order_by('-arrival_time')
     else:
         raise PermissionDenied('You do not have permission to be here. This has been Logged!')
 
