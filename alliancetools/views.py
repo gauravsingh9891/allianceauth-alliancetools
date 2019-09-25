@@ -752,7 +752,7 @@ def do_eve_prasial(request, structure_id=None):
 @login_required
 def str_txfrs(request):
     if request.user.has_perm('alliancetools.admin_alliance_tools'):
-        thritydp = datetime.datetime.today().replace(tzinfo=datetime.timezone.utc) - datetime.timedelta(days=30)
+        thritydp = datetime.datetime.today().replace(tzinfo=datetime.timezone.utc) - datetime.timedelta(days=90)
         notifs = Notification.objects.filter(character__character__corporation_name__contains="Holding", notification_type='OwnershipTransferred', timestamp__gte=thritydp).exclude(notification_text__contains="structureTypeID: 2233")
         txfrs = StructurePaymentCompleted.objects.all()
         txfr_completes = {}

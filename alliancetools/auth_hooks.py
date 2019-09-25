@@ -74,8 +74,8 @@ class TxfrMenu(MenuItemHook):
     def __init__(self):
         MenuItemHook.__init__(self, 'Structure Txfrs',
                               'fa fa-exchange fa-fw',
-                              'alliancetools:txfr',
-                              navactive=['alliancetools:txfr'])
+                              'alliancetools:str_txfr',
+                              navactive=['alliancetools:str_txfr'])
 
     def render(self, request):
         if request.user.has_perm('alliancetools.admin_alliance_tools') or request.user.has_perm('alliancetools.access_alliance_tools_structures_renter'):
