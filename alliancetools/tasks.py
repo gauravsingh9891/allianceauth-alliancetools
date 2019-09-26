@@ -620,31 +620,38 @@ def update_corp_structures(character_id):  # pagnated results
 
             if _structure.get('services'):
                 db_services = StructureService.objects.filter(structure=_structure_ob)
+                current_services = []
                 for service in _structure.get('services'):
                     db_service = db_services.filter(name=service['name'])
                     if db_service.exists():
                         if db_service.count()==1:
                             if db_service[0].state == service['state']:
                                 #logger.debug("No update needed")
+                                current_services.append(db_service[0].id)
                                 pass  # no more duplicates
                             else:
                                 #logger.debug("Updated Service")
-                                db_services.filter(name=service['name']).update(
-                                                                state=service['state'])
+                                db_service.update(state=service['state'])
+                                current_services.append(db_service[0].id)
+
+
                         else:
                             #logger.debug("Dupes")
 
                             StructureService.objects.filter(structure=_structure_ob,
                                                             name=service['name']).delete()  # purge dupes
-                            StructureService.objects.create(structure=_structure_ob,
+                            new_service = StructureService.objects.create(structure=_structure_ob,
                                                             state=service['state'],
                                                             name=service['name'])
+                            current_services.append(new_service.id)
 
                     else:
                         #logger.debug("New Service")
-                        StructureService.objects.create(structure=_structure_ob,
-                                                        state=service['state'],
-                                                        name=service['name'])
+                        new_service = StructureService.objects.create(structure=_structure_ob,
+                                                                    state=service['state'],
+                                                                    name=service['name'])
+                        current_services.append(new_service.id)
+                db_services.exclude(id__in=current_services).delete()
 
         return _structure_ob, _created
 
