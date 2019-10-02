@@ -764,6 +764,9 @@ def check_for_updates():
     for character in AllianceToolCharacter.objects.all():
         run_char_updates.delay(character.character.character_id)
 
+    IgnoredStructure.objects.filter(
+        created_at__lt=(datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(hours=48))).delete()
+
 
 @shared_task(bind=True, base=QueueOnce)
 def run_char_updates(self, character_id):

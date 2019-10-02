@@ -24,7 +24,8 @@
                     <td class="text-center">{% if view_fittings %}<a href="{% url 'alliancetools:structure' structure.structure_id %}">{% endif %}{{ structure.name }}{% if view_fittings %}</a>{% endif %}</br>
                         <span class="label label-info">{{ structure.type_name.name }}</span></br>
                         {% if structure.closest_celestial %}<span class="label label-default">{{ structure.closest_celestial.celestial_name }}</span></br>{% endif %}
-                        <span class="label label-default">{{ structure.corporation.corporation_name }}</span>{% if view_fittings %}<br><a href="{% url 'alliancetools:do_eve_prasial' structure.structure_id %}">Appraisal Link</a>{% endif %}</td>
+                        <span class="label label-default">{{ structure.corporation.corporation_name }}</span>{% if view_fittings %}<br><a class="label label-success" href="{% url 'alliancetools:do_eve_prasial' structure.structure_id %}">Appraisal Link</a>{% endif %}
+                        <a class="label label-success" type="button" href="{% url 'alliancetools:ignore_structure' structure.structure_id %}" title="Mute Pings">Mute Pings</a></td>
                     <td class="text-center">{{ structure.fuel_expires|date:"Y-m-d" }}</br>
                         <span class="label label-default">{{ structure.fuel_expires|timeuntil }}</span>
                         {% if structure.type_id == 35841 %}{% with ozone=structure.ozone_level %}{% if ozone %}</br><span class="label {% if ozone < 1000000 %}label-warning {% else %}label-default{% endif %}">Liquid Ozone: {{ ozone|intcomma  }}</span>{% else %}</br><span class="label label-warning">Liquid Ozone: <b>No Token</b></span>{% endif %}{% endwith %}

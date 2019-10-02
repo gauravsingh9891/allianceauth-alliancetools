@@ -3,6 +3,7 @@ import datetime
 import json
 import yaml
 import requests
+import time
 
 from math import floor
 
@@ -23,13 +24,15 @@ from django.db.models import FloatField, F, ExpressionWrapper
 from .models import AllianceToolCharacter, Structure, CorpAsset, AllianceToolJob, AllianceToolJobComment, \
     NotificationPing, Poco, EveName, Notification, MapSolarSystem, TypeName, MoonExtractEvent, MiningObservation, \
     MarketHistory, OrePrice, PublicContractItem, PublicContract, ApiKeyLog, ApiKey, RentalInvoice, AllianceContact, \
-    RentalInvoice, CorporationWalletJournalEntry, StructurePaymentCompleted, MiningObserver, IgnoredStructure
+    RentalInvoice, CorporationWalletJournalEntry, StructurePaymentCompleted, MiningObserver, IgnoredStructure, \
+    NotificationAlert
 from .forms import AddJob, AddComment, EditJob
 from .tasks import _get_new_eve_name
 from easyaudit.models import CRUDEvent
 
 from django.http import Http404, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.core.serializers.json import DjangoJSONEncoder
 
 CORP_REQUIRED_SCOPES = ['esi-characters.read_notifications.v1',
                         'esi-assets.read_corporation_assets.v1',
@@ -909,8 +912,40 @@ def mark_txfr_uncomplete(request, structure_id=None):
 @login_required
 def ignore_structure(request, structure_id=None):
     struct = Structure.objects.get(structure_id=structure_id)
-    IgnoredStructure.objects.update_or_create(structure=struct,
+    ignored_str, created = IgnoredStructure.objects.update_or_create(structure=struct,
         defaults={'created_by': request.user.profile.main_character})
     #post notification
-    messages.success(request, "{0} has been muted from attack pings for 48h".format(struct.name))
+    attack_hooks = NotificationAlert.objects.filter(structure_ping=True)
+
+    footer = {"icon_url": "https://imageserver.eveonline.com/Corporation/%s_64.png" % (str(request.user.profile.main_character.corporation_id)),
+              "text": "%s - %s (%s)" % (ignored_str.created_by.character_name, ignored_str.created_by.corporation_name, ignored_str.created_by.corporation_ticker)}
+    if created:
+        message = "This Structure has been muted by **{0}** for 48 hours".format(request.user.profile.main_character.character_name)
+    else:
+        message = "This Structure has been re-muted by **{0}** for another 48 hours".format(request.user.profile.main_character.character_name)
+
+    messages.success(request, message)
+
+    custom_data = {'color': 63487, 'title': struct.name, 'description': message,
+                   'timestamp': datetime.datetime.utcnow().replace(tzinfo=timezone.utc),
+                   'footer':footer}
+
+    for hook in attack_hooks:
+        custom_headers = {'Content-Type': 'application/json'}
+        alertText = ""
+        if hook.corporation is None:
+            r = requests.post(hook.discord_webhook, headers=custom_headers,
+                          data=json.dumps({'content': alertText, 'embeds': [custom_data]},
+                                          sort_keys=True,
+                                          indent=1,
+                                          cls=DjangoJSONEncoder))
+            r.raise_for_status()
+        elif hook.corporation.corporation_id == struct.corporation.corporation_id:
+            r = requests.post(hook.discord_webhook, headers=custom_headers,
+                          data=json.dumps({'content': alertText, 'embeds': [custom_data]},
+                                          sort_keys=True,
+                                          indent=1,
+                                          cls=DjangoJSONEncoder))
+            r.raise_for_status()
+
     return redirect('alliancetools:structures')
