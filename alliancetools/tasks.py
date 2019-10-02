@@ -774,14 +774,10 @@ def breakup_updates():
     for corp in corp_ids:
         corp_tokens = AllianceToolCharacter.objects.filter(character__corporation_id=corp)
         latest_date = corp_tokens.latest('next_update_notifs')
-        logger.debug("Latest")
-        logger.debug(latest_date)
         count = 1
-        time_dif = int(10/(corp_tokens.count()+1))
+        time_dif = int(10/(corp_tokens.count()))
         for token in corp_tokens.exclude(id=latest_date.id):
             offset = int(time_dif*count)
-            logger.debug(count)
-            logger.debug(token)
             token.next_update_notifs = latest_date.next_update_notifs + datetime.timedelta(minutes=offset)
             token.save()
             count += 1
