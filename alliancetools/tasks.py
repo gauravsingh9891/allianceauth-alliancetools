@@ -6,7 +6,7 @@ from .models import CorpAsset, ItemName, TypeName, Structure, Notification, Corp
     CorporationWalletDivision, AllianceToolCharacter, StructureService, BridgeOzoneLevel, MapSolarSystem, EveName, \
     NotificationAlert, NotificationPing, Poco, PocoCelestial, AssetLocation, MoonExtractEvent, MiningObservation, \
     MiningObserver, MarketHistory, OrePrice, PublicContract, PublicContractItem, PublicContractSearch, AllianceContact, \
-    AllianceContactLabel, FuelPing, FuelNotifierFilter, StructureCelestial, MiningTax
+    AllianceContactLabel, FuelPing, FuelNotifierFilter, StructureCelestial, MiningTax, IgnoredStructure
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo, EveAllianceInfo
 from esi.models import Token
 from .esi_workaround import EsiResponseClient, esi_client_factory
@@ -1215,7 +1215,9 @@ def send_discord_pings(self):
                                 logger.debug("WTF Broken items table!")
                                 pass  # do i care? shits fucked anyway!
 
-                        if ping:
+                        ignore = IgnoredStructure.objects.filter(structure=structure).exists()
+
+                        if ping and not ignore:
                             for hook in attack_hooks:
                                 if hook.corporation is None:
                                     if not ItemName.objects.filter(item_id=notification_data['charID']).exists():
@@ -1403,7 +1405,7 @@ def send_discord_pings(self):
                     time.sleep(1)
                 except:
                     logging.exception("DISCORD ERROR!")
-                    print(json.dumps({'content': alertText, 'embeds': chunk}), flush=True)
+                    # print(json.dumps({'content': alertText, 'embeds': chunk}), flush=True)
 
 
 @shared_task
@@ -1722,7 +1724,7 @@ def ping_upcoming_moons(self):
                     alertText = ""
                 except:
                     logging.exception("DISCORD ERROR!")
-                    print(json.dumps({'content': alertText, 'embeds': chunk}), flush=True)
+                    # print(json.dumps({'content': alertText, 'embeds': chunk}), flush=True)
 
 
 @shared_task
@@ -2496,7 +2498,6 @@ def update_ore_prices():
                                           })
 
 
-
 @shared_task
 def process_public_contract_items(ids: list):
     """
@@ -2772,19 +2773,71 @@ def trim_old_data():
     Poco.objects.all().exclude(corp__corporation_id__in=corp_ids).delete()
     MoonExtractEvent.objects.all().exclude(corp__corporation_id__in=corp_ids).delete()
 
-def fuel_ping_builder(structure, filter, title, message):
+def fuel_ping_builder(structure, filter, days, message):
+    _title = "%s" % (structure.name)
 
-    return False
+    _system_name = '[%s](http://evemaps.dotlan.net/system/%s)' % \
+                  (structure.system_name.solarSystemName,
+                   structure.system_name.solarSystemName.replace(' ', '_'))
+
+    _url = "https://imageserver.eveonline.com/Type/{0}_64.png".format(structure.type_id)
+
+    _services =  ",".join(structure.structureservice_set.filter(state='online').values_list('name', flat=True))
+
+    custom_data = {'color': 9999,
+                   'title': _title,
+                   'description': message,
+                   'fields':[{'name':'Days Remaing',
+                              'value': days,
+                              'inline': True},
+                             {'name': 'System',
+                              'value': _system_name,
+                              'inline': True},
+                             {'name': 'Online Services',
+                              'value': _services,
+                              'inline': False}
+                             ]}
+
+    custom_data['image'] = {'url': _url}
+
+    pingObj = FuelPing.objects.filter(filter=filter, is_lo_ping=False, last_message=message, structure=structure, date_empty=structure.fuel_expires).exists()
+    if not pingObj:
+        #logger.info("new ping: %s %s"% (_structure,_pingText))
+
+        n = FuelPing(filter=filter,
+                     is_lo_ping=False,
+                     structure=structure,
+                     last_ping_time=days,
+                     last_message=message,
+                     date_empty=structure.fuel_expires)
+        n.save()
+        return custom_data
+    else:
+        #logger.info("already pinged: %s %s"% (_structure,_pingText))
+        return False
+
 
 def lo_ping_builder(structure, filter, title, message):
+    title = "%s" % (_structure)
+    custom_data = {'color': _colour, 'title': title, 'description': _pingText, 'fields':[{'name':'Units Remaing', 'value':_units, 'inline': True}]}
+    custom_data['image'] = {'url': _url}
 
-    return False
+    pingObj = FuelPing.objects.filter(str_id=_strId, body=_pingText).exists()
+    if not pingObj:
+        #logger.info("new ping: %s %s"% (_structure,_pingText))
+
+        n = FuelPing(structure_list=_strList, title=_structure, str_id=_strId, fuel_expires=_units, body=_pingText)
+        n.save()
+        return custom_data
+    else:
+        #logger.info("already pinged: %s %s"% (_structure,_pingText))
+        return False
 
 
 @shared_task
 def send_fuel_pings():
     fuel_filters = FuelNotifierFilter.objects.all()
-
+    pings = {}
     for f in fuel_filters:
         logger.debug("Fuel Pings for %s" % str(f.corporation))
 

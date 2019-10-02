@@ -42,7 +42,6 @@ class MapSolarSystem(models.Model):
     xMin = models.FloatField()
     xMax = models.FloatField()
     yMin = models.FloatField()
-    yMin = models.FloatField()
     yMax = models.FloatField()
     zMin = models.FloatField()
     zMax = models.FloatField()
@@ -770,3 +769,9 @@ class MiningTax(models.Model):
     constellation = models.CharField(max_length=50, null=True, default=None, blank=True)
     system = models.CharField(max_length=50, null=True, default=None, blank=True)
     moon = models.CharField(max_length=50, null=True, default=None, blank=True)
+
+class IgnoredStructure(models.Model):
+    structure = models.ForeignKey(Structure, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(EveCharacter, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now=True)
+    duration = models.IntegerField(default=48)

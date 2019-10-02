@@ -23,7 +23,7 @@ from django.db.models import FloatField, F, ExpressionWrapper
 from .models import AllianceToolCharacter, Structure, CorpAsset, AllianceToolJob, AllianceToolJobComment, \
     NotificationPing, Poco, EveName, Notification, MapSolarSystem, TypeName, MoonExtractEvent, MiningObservation, \
     MarketHistory, OrePrice, PublicContractItem, PublicContract, ApiKeyLog, ApiKey, RentalInvoice, AllianceContact, \
-    RentalInvoice, CorporationWalletJournalEntry, StructurePaymentCompleted, MiningObserver
+    RentalInvoice, CorporationWalletJournalEntry, StructurePaymentCompleted, MiningObserver, IgnoredStructure
 from .forms import AddJob, AddComment, EditJob
 from .tasks import _get_new_eve_name
 from easyaudit.models import CRUDEvent
@@ -906,3 +906,11 @@ def mark_txfr_uncomplete(request, structure_id=None):
     messages.info(request, "Marked Structure Done")
     return redirect('alliancetools:str_txfr')
 
+@login_required
+def ignore_structure(request, structure_id=None):
+    struct = Structure.objects.get(structure_id=structure_id)
+    IgnoredStructure.objects.update_or_create(structure=struct,
+        defaults={'created_by': request.user.profile.main_character})
+    #post notification
+    messages.success(request, "{0} has been muted from attack pings for 48h".format(struct.name))
+    return redirect('alliancetools:structures')

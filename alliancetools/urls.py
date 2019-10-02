@@ -12,6 +12,7 @@ urlpatterns = [
     url(r'^pocos/$', views.pocos, name='pocos'),
     url(r'^txfr/$', views.str_txfr, name='txfr'),
     url(r'^str_txfr/$', views.str_txfrs, name='str_txfr'),
+    url(r'^ignore_structure/(?P<structure_id>(\d)*)/$', views.ignore_structure, name='ignore_structure'),
     url(r'^mark_txfr_complete/(?P<structure_id>(\d)*)/$', views.mark_txfr_complete, name='mark_txfr_complete'),
     url(r'^mark_txfr_uncomplete/(?P<structure_id>(\d)*)/$', views.mark_txfr_uncomplete, name='mark_txfr_uncomplete'),
     url(r'^structure/(?P<structure_id>(\d)*)/$', views.structure, name='structure'),

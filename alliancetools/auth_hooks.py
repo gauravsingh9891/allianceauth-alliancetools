@@ -3,7 +3,7 @@ from allianceauth import hooks
 from allianceauth.services.hooks import MenuItemHook, UrlHook
 from allianceauth.authentication.models import UserProfile, State
 
-
+ 
 class AllianceMenu(MenuItemHook):
     def __init__(self):
         MenuItemHook.__init__(self, 'Alliance Toolbox',

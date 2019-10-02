@@ -2,7 +2,7 @@ from django.contrib import admin
 
 # Register your models here.
 from .models import AllianceToolCharacter, AllianceToolJob, AllianceToolJobComment, NotificationAlert, GroupReqWebhook,\
-    RentedMoon, PublicContractSearch, ApiKeyLog, ApiKey, FuelPing, FuelNotifierFilter, RentalInvoice
+    RentedMoon, PublicContractSearch, ApiKeyLog, ApiKey, FuelPing, FuelNotifierFilter, RentalInvoice, MiningTax, IgnoredStructure
 
 admin.site.register(AllianceToolCharacter)
 admin.site.register(AllianceToolJob)
@@ -14,6 +14,8 @@ admin.site.register(ApiKeyLog)
 admin.site.register(ApiKey)
 admin.site.register(FuelNotifierFilter)
 admin.site.register(FuelPing)
+admin.site.register(MiningTax)
+admin.site.register(IgnoredStructure)
 
 class RentalInvoiceAdmin(admin.ModelAdmin):
     list_display=('transaction_id', 'character', 'corporation', 'sum_isk')
