@@ -768,6 +768,25 @@ def check_for_updates():
         created_at__lt=(datetime.datetime.utcnow().replace(tzinfo=timezone.utc) - datetime.timedelta(hours=48))).delete()
 
 
+@shared_task
+def breakup_updates():
+    corp_ids = set(AllianceToolCharacter.objects.filter(next_update_notifs__isnull=False).values_list('character__corporation_id', flat=True))
+    for corp in corp_ids:
+        corp_tokens = AllianceToolCharacter.objects.filter(character__corporation_id=corp)
+        latest_date = corp_tokens.latest('next_update_notifs')
+        logger.debug("Latest")
+        logger.debug(latest_date)
+        count = 1
+        time_dif = int(10/(corp_tokens.count()+1))
+        for token in corp_tokens.exclude(id=latest_date.id):
+            offset = int(time_dif*count)
+            logger.debug(count)
+            logger.debug(token)
+            token.next_update_notifs = latest_date.next_update_notifs + datetime.timedelta(minutes=offset)
+            token.save()
+            count += 1
+
+
 @shared_task(bind=True, base=QueueOnce)
 def run_char_updates(self, character_id):
     logger.debug("Started update for: %s" % (str(character_id)))
